@@ -216,3 +216,34 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+service_account.json
+.env
+qa_dataset.csv
+qa_dataset.json
+__pycache__/
+*.pyc
+
+
+CLAUDE.md
+.claude/
+# Secrets
+.env
+service_account.json
+
+# Generated data
+data/
+*.csv
+*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Local vector store
+chroma_db/
