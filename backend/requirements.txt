@@ -1,7 +1,5 @@
 openai
 python-dotenv
-markitdown[pdf,pptx,docx,xlsx]
-langchain-text-splitters
 pandas
 google-api-python-client
 google-auth
@@ -10,9 +8,9 @@ fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
-pydantic-settings
 celery
 redis
 minio
-markitdown
+markitdown[pdf,pptx,docx,xlsx]
 langchain-text-splitters
+python-multipart
