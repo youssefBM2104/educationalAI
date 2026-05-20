@@ -1,0 +1,16 @@
+openai
+python-dotenv
+pandas
+google-api-python-client
+google-auth
+pydantic-settings
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+celery
+redis
+minio
+markitdown[pdf,pptx,docx,xlsx]
+langchain-text-splitters
+python-multipart
