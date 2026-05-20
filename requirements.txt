@@ -6,3 +6,13 @@ pandas
 google-api-python-client
 google-auth
 pydantic-settings
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic-settings
+celery
+redis
+minio
+markitdown
+langchain-text-splitters
