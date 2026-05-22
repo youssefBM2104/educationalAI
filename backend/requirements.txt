@@ -16,4 +16,6 @@ langchain-text-splitters
 python-multipart
 langchain-core
 pydantic
+langchain_nvidia_ai_endpoints
+neo4j
 

@@ -38,7 +38,7 @@ def chunk(text: str, document_id: str, course_id: str) -> list[dict]:
             "course_id": course_id,
             "chunk_index": i,
             "text": split,
-            "covers_concepts": [],
+            "chunks_with_concepts": [],
         }
         for i, split in enumerate(splits)
     ]

@@ -183,9 +183,43 @@ Extract nodes and relations according to the controlled schema."""
                     rel.chunk_id = chunk_id
             
             return extraction
-            
+
         except Exception as e:
-            print(f"Error transforming chunk {chunk_id}: {e}")
+            # Distinguish failure types for ChatNVIDIA
+            err_str = str(e).lower()
+            err_type = type(e).__name__
+
+            if any(k in err_str for k in ("429", "rate limit", "too many requests")):
+                print(
+                    f"[RATE LIMIT] Chunk {chunk_id} dropped — ChatNVIDIA quota exceeded. "
+                    f"Lower max_concurrent or add a retry delay. ({err_type}: {e})"
+                )
+            elif any(k in err_str for k in ("401", "403", "unauthorized", "forbidden", "api key", "authentication")):
+                print(
+                    f"[AUTH ERROR] Chunk {chunk_id} dropped — ChatNVIDIA credentials rejected. "
+                    f"Check your NVIDIA_API_KEY. ({err_type}: {e})"
+                )
+            elif any(k in err_str for k in ("500", "502", "503", "504", "server error", "service unavailable", "timeout", "timed out", "connection")):
+                print(
+                    f"[NETWORK/SERVER ERROR] Chunk {chunk_id} dropped — ChatNVIDIA endpoint unreachable or timed out. "
+                    f"Consider retrying. ({err_type}: {e})"
+                )
+            elif "json" in err_str or isinstance(e, (ValueError, KeyError)) and "parse" in err_str:
+                print(
+                    f"[JSON PARSE ERROR] Chunk {chunk_id} dropped — LLM returned malformed JSON. "
+                    f"Raw content may contain markdown or extra text. ({err_type}: {e})"
+                )
+            elif err_type in ("ValidationError", "PydanticValidationError") or "validation" in err_str:
+                print(
+                    f"[SCHEMA VALIDATION ERROR] Chunk {chunk_id} dropped — extracted JSON doesn't match "
+                    f"KGChunkExtraction schema (wrong node_type or relation_type?). ({err_type}: {e})"
+                )
+            else:
+                print(
+                    f"[UNEXPECTED ERROR] Chunk {chunk_id} dropped — unhandled exception during LLM extraction. "
+                    f"({err_type}: {e})"
+                )
+
             return KGChunkExtraction()
     
     def _clean_json_response(self, raw: str) -> str:
@@ -257,11 +291,12 @@ class KnowledgeGraphStore:
                 REQUIRE c.chunk_id IS UNIQUE
             """)
             
-            # Index for relations
-            session.run("""
-                CREATE INDEX relation_chunk_id IF NOT EXISTS
-                FOR ()-[r]-() ON (r.chunk_id)
-            """)
+            # Index for relations — one index per relationship type (Neo4j 5 syntax)
+            for rel_type in RelationType:
+                session.run(f"""
+                    CREATE INDEX rel_chunk_id_{rel_type.name} IF NOT EXISTS
+                    FOR ()-[r:{rel_type.value.upper()}]-() ON (r.chunk_id)
+                """)
     
     def add_extractions(self, extractions: List[KGChunkExtraction]):
         """Add extractions to KG (synchronous version)"""
@@ -476,6 +511,11 @@ class KGBuilder:
         print(f"  • Relations stored: {total_relations}")
         print(f"  • Neo4j: {self.store.uri}")
         
+        # Write covers_concepts back into each chunk dict.
+        # Uses chunk_id_to_dict for explicit, order-independent mapping.
+        # Each entry is {"id": ..., "name": ...} so callers have both the
+        # graph-traversal key and the human-readable label in one field,
+        # consistent with the covers_concepts: [] schema from ingestion.py.
         chunk_id_to_extraction = {
             chunk_dict["chunk_id"]: extraction
             for chunk_dict, extraction in zip(chunks_dicts, extractions)
@@ -494,7 +534,7 @@ class KGBuilder:
             "non_empty_chunks": non_empty,
             "total_nodes": total_nodes,
             "total_relations": total_relations,
-            "extractions": extractions
+            "extractions": extractions,
             "chunks_with_concepts": chunks_dicts
         }
         
@@ -508,6 +548,5 @@ class KGBuilder:
         return self.store.get_related_chunks(node_id, max_hops)
     
     def close(self):
-
         """Close Neo4j connection"""
         self.store.close()

@@ -1,12 +1,16 @@
 import tempfile
 import os
+import asyncio
 
 from celery import Celery
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
 from backend.rag.ingestion import parse_and_chunk
+from backend.KG.kg_builder import KGBuilder
+
 
 celery_app = Celery(
     "ingestion",
@@ -38,6 +42,28 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         if not os.path.exists(md_path):
             raise FileNotFoundError(f"Markdown file not generated at {md_path}")
         upload_file(tmp_path +".md", minio_key+".md", settings.minio_bucket_markdown)
+
+
+
+        # Knowledge Graph construction 
+        
+        llm = ChatNVIDIA(
+            model="meta/llama-3.1-70b-instruct",
+            api_key=settings.nim_api_key,
+            temperature=0.1,
+        )
+        kg = KGBuilder(
+            llm=llm,
+            neo4j_uri=settings.neo4j_uri,
+            neo4j_user=settings.neo4j_user,
+            neo4j_password=settings.neo4j_password,
+        )
+        try:
+            asyncio.run(kg.build_from_dicts(chunks))
+        finally:
+            kg.close()
+        
+
 
         doc.status = DocumentStatus.ready
         db.commit()
