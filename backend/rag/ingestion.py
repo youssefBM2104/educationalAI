@@ -1,14 +1,29 @@
 from pathlib import Path
 
+import fitz
 from markitdown import MarkItDown
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import re
 
 
-def parse(file_path):
-    md = MarkItDown()
-    result = md.convert(file_path)
-    return result.text_content
+def parse(file_path: str) -> str:
+    suffix = Path(file_path).suffix.lower()
+    if suffix == ".pdf":
+        return _parse_pdf_pymupdf(file_path)
+    else:
+        md = MarkItDown()
+        result = md.convert(file_path)
+        return result.text_content
+
+def _parse_pdf_pymupdf(file_path: str) -> str:
+    doc = fitz.open(file_path)
+    pages = []
+    for page_num, page in enumerate(doc, start=1):
+        text = page.get_text("markdown")
+        if text.strip():
+            pages.append(f"<!-- page {page_num} -->\n{text}")
+    doc.close()
+    return "\n\n".join(pages)
 
 def clean(text: str) -> str:
     # 1. Normalize Windows line endings
