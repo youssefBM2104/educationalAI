@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf4llm
 from markitdown import MarkItDown
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import re
@@ -16,13 +16,15 @@ def parse(file_path: str) -> str:
         return result.text_content
 
 def _parse_pdf_pymupdf(file_path: str) -> str:
-    doc = fitz.open(file_path)
+    # pymupdf4llm extracts structured Markdown (headings, tables) with reliable
+    # word spacing, unlike a raw page.get_text() dump.
+    page_chunks = pymupdf4llm.to_markdown(file_path, page_chunks=True)
     pages = []
-    for page_num, page in enumerate(doc, start=1):
-        text = page.get_text("markdown")
+    for chunk in page_chunks:
+        text = chunk["text"]
         if text.strip():
+            page_num = chunk["metadata"]["page_number"]
             pages.append(f"<!-- page {page_num} -->\n{text}")
-    doc.close()
     return "\n\n".join(pages)
 
 def clean(text: str) -> str:
