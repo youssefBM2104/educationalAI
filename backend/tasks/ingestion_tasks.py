@@ -58,10 +58,9 @@ def process_document(document_id: str, minio_key: str, course_id: str):
             neo4j_user=settings.neo4j_user,
             neo4j_password=settings.neo4j_password,
         )
-        try:
-            asyncio.run(kg.build_from_dicts(chunks))
-        finally:
-            kg.close()
+        
+        asyncio.run(kg.build_from_dicts(chunks))
+        
         
 
 
