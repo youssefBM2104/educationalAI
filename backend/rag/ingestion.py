@@ -1,14 +1,31 @@
 from pathlib import Path
 
+import pymupdf4llm
 from markitdown import MarkItDown
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import re
 
 
-def parse(file_path):
-    md = MarkItDown()
-    result = md.convert(file_path)
-    return result.text_content
+def parse(file_path: str) -> str:
+    suffix = Path(file_path).suffix.lower()
+    if suffix == ".pdf":
+        return _parse_pdf_pymupdf(file_path)
+    else:
+        md = MarkItDown()
+        result = md.convert(file_path)
+        return result.text_content
+
+def _parse_pdf_pymupdf(file_path: str) -> str:
+    # pymupdf4llm extracts structured Markdown (headings, tables) with reliable
+    # word spacing, unlike a raw page.get_text() dump.
+    page_chunks = pymupdf4llm.to_markdown(file_path, page_chunks=True)
+    pages = []
+    for chunk in page_chunks:
+        text = chunk["text"]
+        if text.strip():
+            page_num = chunk["metadata"]["page_number"]
+            pages.append(f"<!-- page {page_num} -->\n{text}")
+    return "\n\n".join(pages)
 
 def clean(text: str) -> str:
     # 1. Normalize Windows line endings
