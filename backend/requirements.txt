@@ -22,3 +22,5 @@ langchain-community
 langchain-experimental
 json-repair
 langchain-neo4j
+pymupdf
+pymupdf4llm

@@ -12,17 +12,22 @@ from backend.core.config import settings
 from sqlalchemy import create_engine, text
 from neo4j import GraphDatabase
 
-TABLES = [
-    "documents",
-]
 
 # --- Wipe PostgreSQL ---
+TABLES = [
+    "documents",
+    # add future tables here as the schema grows
+    # "users",
+    # "courses",
+]
+
 engine = create_engine(settings.postgres_url)
 
 with engine.begin() as conn:
     for table in TABLES:
         conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
         print(f"✓ Wiped table: {table}")
+
 
 # --- Wipe Neo4j ---
 driver = GraphDatabase.driver(

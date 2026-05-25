@@ -40,6 +40,8 @@ import json
 import asyncio
 import tempfile
 import time
+
+import fitz
 import pandas as pd
 import httpx
 from dotenv import load_dotenv
@@ -211,11 +213,23 @@ def convert_to_markdown(file_bytes: bytes, extension: str) -> str:
         tmp.write(file_bytes)
         tmp_path = tmp.name
     try:
-        result = _markitdown.convert(tmp_path)
-        return result.text_content or ""
+        if extension.lower() == ".pdf":
+            return _parse_pdf_pymupdf(tmp_path)
+        else:
+            result = _markitdown.convert(tmp_path)
+            return result.text_content or ""
     finally:
         os.unlink(tmp_path)
 
+def _parse_pdf_pymupdf(file_path: str) -> str:
+    doc = fitz.open(file_path)
+    pages = []
+    for page_num, page in enumerate(doc, start=1):
+        text = page.get_text("markdown")
+        if text.strip():
+            pages.append(f"<!-- page {page_num} -->\n{text}")
+    doc.close()
+    return "\n\n".join(pages)
 
 # =============================================================================
 # CHUNKING
