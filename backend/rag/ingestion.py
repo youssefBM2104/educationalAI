@@ -1,4 +1,5 @@
 from pathlib import Path
+import uuid
 
 from markitdown import MarkItDown
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -24,6 +25,7 @@ def clean(text: str) -> str:
     return text.strip()
 
 
+
 def chunk(text: str, document_id: str, course_id: str) -> list[dict]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1600,
@@ -33,7 +35,7 @@ def chunk(text: str, document_id: str, course_id: str) -> list[dict]:
     splits = splitter.split_text(text)
     return [
         {
-            "chunk_id": f"{document_id}_chunk_{i:04d}",
+            "chunk_id": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{document_id}_chunk_{i:04d}")),
             "document_id": document_id,
             "course_id": course_id,
             "chunk_index": i,
@@ -42,6 +44,8 @@ def chunk(text: str, document_id: str, course_id: str) -> list[dict]:
         }
         for i, split in enumerate(splits)
     ]
+
+
 
 def parse_and_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
     raw_text = parse(file_path)

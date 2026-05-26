@@ -14,3 +14,5 @@ minio
 markitdown[pdf,pptx,docx,xlsx]
 langchain-text-splitters
 python-multipart
+qdrant-client
+flagembedding

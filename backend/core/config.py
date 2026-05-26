@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "edu_collection"
 
     # Neo4j
     neo4j_uri: str
