@@ -1,16 +1,17 @@
 import logging
 from FlagEmbedding import BGEM3FlagModel
+import torch
 
 logger = logging.getLogger(__name__)
-
-model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True, device=device)
 logger.info("BGE-M3 model loaded")
 
 def embed_chunks(chunks: list[dict]) -> list[dict]:
     texts = [chunk["text"] for chunk in chunks]
     output = model.encode(
         texts,
-        batch_size=4,
+        batch_size=16,
         return_dense=True,
         return_sparse=True,
         return_colbert_vecs=False,

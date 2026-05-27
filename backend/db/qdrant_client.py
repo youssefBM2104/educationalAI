@@ -44,32 +44,36 @@ def get_qdrant_client():
     _client = client
     return _client
 
+_UPSERT_BATCH_SIZE = 100
+
 def upsert_chunks(chunks):
     client = get_qdrant_client()
-    try:
-        client.upsert(
-            collection_name=settings.qdrant_collection,
-            points=[
-                PointStruct(
-                    id=chunk["chunk_id"],
-                    vector={
-                        "dense": chunk["dense_vector"],
-                        "sparse": SparseVector(
-                            indices=chunk["sparse_vector"]["indices"],
-                            values=chunk["sparse_vector"]["values"],
-                        ),
-                    },
-                    payload={
-                        "text": chunk["text"],
-                        "document_id": chunk["document_id"],
-                        "course_id": chunk["course_id"],
-                        "chunk_index": chunk["chunk_index"],
-                        "covers_concepts": chunk["covers_concepts"],
-                    }
-                )
-                for chunk in chunks
-            ],
+    points = [
+        PointStruct(
+            id=chunk["chunk_id"],
+            vector={
+                "dense": chunk["dense_vector"],
+                "sparse": SparseVector(
+                    indices=chunk["sparse_vector"]["indices"],
+                    values=chunk["sparse_vector"]["values"],
+                ),
+            },
+            payload={
+                "text": chunk["text"],
+                "document_id": chunk["document_id"],
+                "course_id": chunk["course_id"],
+                "chunk_index": chunk["chunk_index"],
+                "covers_concepts": chunk["covers_concepts"],
+            }
         )
+        for chunk in chunks
+    ]
+    try:
+        for i in range(0, len(points), _UPSERT_BATCH_SIZE):
+            client.upsert(
+                collection_name=settings.qdrant_collection,
+                points=points[i : i + _UPSERT_BATCH_SIZE],
+            )
     except UnexpectedResponse as e:
         logger.error(
             "Qdrant upsert failed — status=%s reason=%r body=%r",
