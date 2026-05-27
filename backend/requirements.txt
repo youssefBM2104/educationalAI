@@ -14,5 +14,13 @@ minio
 markitdown[pdf,pptx,docx,xlsx]
 langchain-text-splitters
 python-multipart
+langchain-core
+pydantic
+langchain_nvidia_ai_endpoints
+neo4j
+langchain-community
+langchain-experimental
+json-repair
+langchain-neo4j
 pymupdf
 pymupdf4llm
