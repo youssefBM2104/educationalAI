@@ -42,7 +42,7 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         chunks = parse_and_chunk(tmp_path, document_id, course_id)
 
         # Knowledge Graph construction 
-        kg = get_kg
+        kg = get_kg()
         
         kg.build_from_dicts(chunks)
 

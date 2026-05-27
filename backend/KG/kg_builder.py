@@ -5,6 +5,9 @@ from langchain_neo4j import Neo4jGraph
 from langchain_core.documents import Document
 from typing import List, Dict, Any
 
+import asyncio
+
+
 class KGBuilder:
     def __init__(self, llm, neo4j_uri, neo4j_user, neo4j_password):
         self.transformer = LLMGraphTransformer(
@@ -35,7 +38,7 @@ class KGBuilder:
         ]
 
         # LangChain handles extraction + schema enforcement
-        graph_docs =self.transformer.aconvert_to_graph_documents(documents)
+        graph_docs = asyncio.run(self.transformer.aconvert_to_graph_documents(documents))
         self.graph.add_graph_documents(graph_docs, include_source=True)
 
         # Write covers_concepts
