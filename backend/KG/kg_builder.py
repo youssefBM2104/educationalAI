@@ -20,7 +20,7 @@ class KGBuilder:
             password=neo4j_password
         )
 
-    async def build_from_dicts(self, chunks_dicts: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def build_from_dicts(self, chunks_dicts: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Convert chunk dicts to LangChain Documents
         documents = [
             Document(
@@ -35,12 +35,10 @@ class KGBuilder:
         ]
 
         # LangChain handles extraction + schema enforcement
-        graph_docs = await self.transformer.aconvert_to_graph_documents(documents)
-
-        # LangChain handles Neo4j storage + Chunk node linking
+        graph_docs =self.transformer.aconvert_to_graph_documents(documents)
         self.graph.add_graph_documents(graph_docs, include_source=True)
 
-        # Write covers_concepts back to chunk dicts (for Qdrant metadata)
+        # Write covers_concepts
         chunk_id_to_dict = {c["chunk_id"]: c for c in chunks_dicts}
         for graph_doc in graph_docs:
             chunk_id = graph_doc.source.metadata.get("chunk_id")
