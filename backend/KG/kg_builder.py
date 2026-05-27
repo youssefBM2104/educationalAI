@@ -57,6 +57,6 @@ class KGBuilder:
             "total_chunks": len(chunks_dicts),
             "total_nodes": total_nodes,
             "total_relations": total_rels,
-            "chunks_with_concepts": chunks_dicts,
+            "covers_concepts": chunks_dicts,
         }
 
