@@ -14,8 +14,13 @@ minio
 markitdown[pdf,pptx,docx,xlsx]
 langchain-text-splitters
 python-multipart
+<<<<<<< HEAD
 pymupdf
 pymupdf4llm
 langchain-experimental
 langchain-huggingface
 sentence-transformers
+=======
+qdrant-client
+flagembedding
+>>>>>>> origin/feat/loadPipeline
