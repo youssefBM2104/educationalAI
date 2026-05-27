@@ -123,7 +123,13 @@ def parse_and_chunk(file_path: str, document_id: str, course_id: str) -> list[di
     raw_text = parse(file_path)
     clean_text = clean(raw_text)
     Path(file_path + ".md").write_text(clean_text, encoding="utf-8")
-    return chunk(clean_text, document_id, course_id)
+    chunks = chunk(clean_text, document_id, course_id)
+    if not chunks:
+        raise ValueError(
+            f"Document produced no chunks after parsing — "
+            f"file may be empty or unreadable: {file_path}"
+        )
+    return chunks
 
 
 def parse_and_semantic_hierarchical_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
@@ -136,4 +142,10 @@ def parse_and_semantic_hierarchical_chunk(file_path: str, document_id: str, cour
     raw_text = parse(file_path)
     clean_text = clean(raw_text)
     Path(file_path + ".md").write_text(clean_text, encoding="utf-8")
-    return semantic_hierarchical_chunk(clean_text, document_id, course_id)
+    chunks = semantic_hierarchical_chunk(clean_text, document_id, course_id)
+    if not chunks:
+        raise ValueError(
+            f"Document produced no chunks after parsing — "
+            f"file may be empty or unreadable: {file_path}"
+        )
+    return chunks

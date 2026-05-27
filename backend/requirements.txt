@@ -21,3 +21,10 @@ langchain-huggingface
 sentence-transformers
 qdrant-client
 flagembedding
+langchain-core
+pydantic
+langchain_nvidia_ai_endpoints
+neo4j
+langchain-community
+json-repair
+langchain-neo4j

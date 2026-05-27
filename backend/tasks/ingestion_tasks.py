@@ -7,7 +7,6 @@ from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
 from backend.rag.ingestion import parse_and_chunk
-from backend.rag.embedder import embed_chunks
 from backend.db.qdrant_client import upsert_chunks
 
 celery_app = Celery(
@@ -23,7 +22,9 @@ celery_app.conf.update(
 
 @celery_app.task
 def process_document(document_id: str, minio_key: str, course_id: str):
+    from backend.rag.embedder import embed_chunks
     db = SessionLocal()
+    doc = None
     try:
         doc = db.get(Document, document_id)
         doc.status = DocumentStatus.processing
@@ -50,10 +51,10 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         return {"document_id": document_id, "chunks_count": len(chunks)}
 
     except Exception as exc:
-        doc = db.get(Document, document_id)
-        doc.status = DocumentStatus.failed
-        doc.error_msg = str(exc)
-        db.commit()
+        if doc:
+            doc.status = DocumentStatus.failed
+            doc.error_msg = str(exc)
+            db.commit()
         raise
 
 
