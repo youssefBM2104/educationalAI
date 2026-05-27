@@ -105,7 +105,7 @@ def semantic_hierarchical_chunk(text: str, document_id: str, course_id: str) -> 
         header_path = re.sub(r"\*+|_+", "", header_path).strip()
         for piece in semantic_splitter.split_text(content):
             chunks.append({
-                "chunk_id": f"{document_id}_chunk_{idx:04d}",
+                "chunk_id": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{document_id}_chunk_{idx:04d}")),
                 "document_id": document_id,
                 "course_id": course_id,
                 "chunk_index": idx,
@@ -118,9 +118,22 @@ def semantic_hierarchical_chunk(text: str, document_id: str, course_id: str) -> 
 
 
 
-
 def parse_and_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
+    """Parse -> clean -> save markdown -> RECURSIVE chunk."""
     raw_text = parse(file_path)
     clean_text = clean(raw_text)
     Path(file_path + ".md").write_text(clean_text, encoding="utf-8")
     return chunk(clean_text, document_id, course_id)
+
+
+def parse_and_semantic_hierarchical_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
+    """Parse -> clean -> save markdown -> SEMANTIC + HIERARCHICAL chunk.
+
+    Sibling of parse_and_chunk(): same prepare steps, different chunking strategy.
+    Use this when you want richer chunks with header metadata + semantic boundaries
+    (slower; embeds every sentence via sentence-transformers).
+    """
+    raw_text = parse(file_path)
+    clean_text = clean(raw_text)
+    Path(file_path + ".md").write_text(clean_text, encoding="utf-8")
+    return semantic_hierarchical_chunk(clean_text, document_id, course_id)
