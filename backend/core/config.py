@@ -22,9 +22,13 @@ class Settings(BaseSettings):
     qdrant_collection: str = "edu_collection"
 
     # Neo4j
-    neo4j_uri: str
+    neo4j_uri: str = "bolt://neo4j:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str
+
+    # NVIDIA
+    nim_api_key: str
+    
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

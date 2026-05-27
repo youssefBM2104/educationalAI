@@ -6,12 +6,14 @@ Run from project root: python3 scripts/wipe_db.py
 import sys
 import os
 
-# Allow imports from project root
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.core.config import settings
 from sqlalchemy import create_engine, text
+from neo4j import GraphDatabase
 
+
+# --- Wipe PostgreSQL ---
 TABLES = [
     "documents",
     # add future tables here as the schema grows
@@ -25,6 +27,19 @@ with engine.begin() as conn:
     for table in TABLES:
         conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
         print(f"✓  Wiped Postgres table: {table}")
+
+
+# --- Wipe Neo4j ---
+driver = GraphDatabase.driver(
+    "bolt://localhost:7687",
+    auth=(settings.neo4j_user, settings.neo4j_password)
+)
+
+with driver.session() as session:
+    session.run("MATCH (n) DETACH DELETE n")
+    print("✓ Wiped Neo4j: all nodes and relationships deleted")
+
+driver.close()
 
 # ── 2. Qdrant ─────────────────────────────────────────────────────────────────
 
@@ -70,5 +85,5 @@ for bucket in (settings.minio_bucket_originals, settings.minio_bucket_markdown):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-print("\nDone. Postgres tables empty, Qdrant collection deleted, MinIO buckets empty.")
+print("\nDone. Postgres tables empty, Qdrant collection deleted, MinIO buckets empty, Neo4j is reset.")
 print("The Qdrant collection and MinIO buckets will be recreated on next ingestion.")
