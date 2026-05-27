@@ -1,12 +1,18 @@
 import tempfile
 import os
+import asyncio
 
 from celery import Celery
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
 from backend.rag.ingestion import parse_and_chunk
+from backend.KG.kg_builder import KGBuilder
+from backend.db.kg_client import get_kg
+
+
 from backend.db.qdrant_client import upsert_chunks
 
 celery_app = Celery(
@@ -37,6 +43,12 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         download_file(tmp_path, minio_key, settings.minio_bucket_originals)
 
         chunks = parse_and_chunk(tmp_path, document_id, course_id)
+
+        # Knowledge Graph construction 
+        kg = get_kg()
+        
+        kg.build_from_dicts(chunks)
+
         chunks = embed_chunks(chunks)
         upsert_chunks(chunks)
         md_path = tmp_path + ".md"
