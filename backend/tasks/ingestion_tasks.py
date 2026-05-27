@@ -13,6 +13,7 @@ from backend.KG.kg_builder import KGBuilder
 from backend.db.kg_client import get_kg
 
 
+from backend.db.qdrant_client import upsert_chunks
 
 celery_app = Celery(
     "ingestion",
@@ -27,7 +28,9 @@ celery_app.conf.update(
 
 @celery_app.task
 def process_document(document_id: str, minio_key: str, course_id: str):
+    from backend.rag.embedder import embed_chunks
     db = SessionLocal()
+    doc = None
     try:
         doc = db.get(Document, document_id)
         doc.status = DocumentStatus.processing
@@ -46,6 +49,8 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         
         kg.build_from_dicts(chunks)
 
+        chunks = embed_chunks(chunks)
+        upsert_chunks(chunks)
         md_path = tmp_path + ".md"
         if not os.path.exists(md_path):
             raise FileNotFoundError(f"Markdown file not generated at {md_path}")
@@ -58,10 +63,10 @@ def process_document(document_id: str, minio_key: str, course_id: str):
         return {"document_id": document_id, "chunks_count": len(chunks)}
 
     except Exception as exc:
-        doc = db.get(Document, document_id)
-        doc.status = DocumentStatus.failed
-        doc.error_msg = str(exc)
-        db.commit()
+        if doc:
+            doc.status = DocumentStatus.failed
+            doc.error_msg = str(exc)
+            db.commit()
         raise
 
 
