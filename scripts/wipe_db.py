@@ -1,9 +1,6 @@
 """
-wipe_db.py — Wipe all dev data stores: PostgreSQL tables, Qdrant collection,
-             and MinIO buckets (originals + markdown).
-
-Run from project root:
-    python3 scripts/wipe_db.py
+wipe_db.py — Truncate all dev tables and reset sequences.
+Run from project root: python3 scripts/wipe_db.py
 """
 
 import sys
@@ -14,8 +11,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.core.config import settings
 from sqlalchemy import create_engine, text
-
-# ── 1. PostgreSQL ─────────────────────────────────────────────────────────────
 
 TABLES = [
     "documents",
