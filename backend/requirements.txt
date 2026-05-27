@@ -16,3 +16,6 @@ langchain-text-splitters
 python-multipart
 pymupdf
 pymupdf4llm
+langchain-experimental
+langchain-huggingface
+sentence-transformers
