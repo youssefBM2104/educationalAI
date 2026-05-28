@@ -5,7 +5,7 @@ from langchain_neo4j import Neo4jGraph
 from langchain_core.documents import Document
 from typing import List, Dict, Any
 
-import asyncio
+import time
 
 
 class KGBuilder:
@@ -23,6 +23,19 @@ class KGBuilder:
             password=neo4j_password
         )
 
+    def _convert_one_with_retry(self, doc: Document, max_retries: int = 5):
+        # NVIDIA NIM free tier ~40 req/min — retry on 429 with exponential backoff
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                return self.transformer.convert_to_graph_documents([doc])[0]
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                raise
+
     def build_from_dicts(self, chunks_dicts: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Convert chunk dicts to LangChain Documents
         documents = [
@@ -37,8 +50,11 @@ class KGBuilder:
             for chunk in chunks_dicts
         ]
 
-        # LangChain handles extraction + schema enforcement
-        graph_docs = asyncio.run(self.transformer.aconvert_to_graph_documents(documents))
+        # Sequential extraction with throttle — avoids 429 on NVIDIA's per-minute limit
+        graph_docs = []
+        for doc in documents:
+            graph_docs.append(self._convert_one_with_retry(doc))
+            time.sleep(1.5)
         self.graph.add_graph_documents(graph_docs, include_source=True)
 
         # Write covers_concepts
