@@ -110,7 +110,6 @@ def semantic_hierarchical_chunk(text: str, document_id: str, course_id: str) -> 
                 "course_id": course_id,
                 "chunk_index": idx,
                 "text": piece,
-                "section": header_path,
                 "covers_concepts": [],
             })
             idx += 1

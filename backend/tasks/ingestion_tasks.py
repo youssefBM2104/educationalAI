@@ -8,7 +8,8 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
-from backend.rag.ingestion import parse_and_chunk
+from backend.rag.ingestion import parse_and_chunk, parse_and_semantic_hierarchical_chunk
+
 from backend.KG.kg_builder import KGBuilder
 from backend.db.kg_client import get_kg
 
@@ -42,19 +43,30 @@ def process_document(document_id: str, minio_key: str, course_id: str):
 
         download_file(tmp_path, minio_key, settings.minio_bucket_originals)
 
-        chunks = parse_and_chunk(tmp_path, document_id, course_id)
+        chunks = parse_and_semantic_hierarchical_chunk(tmp_path, document_id, course_id)
 
-        # Knowledge Graph construction 
-        kg = get_kg()
-        
-        kg.build_from_dicts(chunks)
-
-        chunks = embed_chunks(chunks)
-        upsert_chunks(chunks)
+        # 1) Save markdown to MinIO FIRST so it survives even if later steps fail.
         md_path = tmp_path + ".md"
         if not os.path.exists(md_path):
             raise FileNotFoundError(f"Markdown file not generated at {md_path}")
-        upload_file(tmp_path +".md", minio_key+".md", settings.minio_bucket_markdown)
+        upload_file(tmp_path + ".md", minio_key + ".md", settings.minio_bucket_markdown)
+
+        # 2) Embed + upsert chunks to Qdrant — local services, reliable.
+        chunks = embed_chunks(chunks)
+        upsert_chunks(chunks)
+
+        # 3) Knowledge Graph extraction — most fragile (external LLM, rate limits).
+        #    Run last and DON'T fail the task if it errors; document is still useful
+        #    for vector retrieval. KG can be rebuilt later via a backfill job.
+        try:
+            kg = get_kg()
+            kg.build_from_dicts(chunks)
+        except Exception as kg_exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[KG] build failed for {document_id} — vector store still OK. "
+                f"Reason: {kg_exc}"
+            )
 
         doc.status = DocumentStatus.ready
         db.commit()
