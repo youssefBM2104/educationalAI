@@ -20,7 +20,11 @@ langchain_nvidia_ai_endpoints
 neo4j
 langchain-community
 langchain-experimental
+langchain-huggingface
+sentence-transformers
 json-repair
 langchain-neo4j
 pymupdf
 pymupdf4llm
+qdrant-client
+FlagEmbedding
