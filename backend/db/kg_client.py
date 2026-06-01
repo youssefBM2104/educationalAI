@@ -30,7 +30,7 @@ def get_kg():
             neo4j_user=settings.neo4j_user,
             neo4j_password=settings.neo4j_password,
         )
-        logger.info("Created kg")
+        logger.info("Creating kg")
     except Exception as e:
         logger.error("Failed to initialize KGBuilder: %s", e)
         raise

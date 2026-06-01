@@ -1,4 +1,6 @@
 # kg_builder.py — Spec-compliant version
+import asyncio
+
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 #from langchain_community.graphs import Neo4jGraph
 from langchain_neo4j import Neo4jGraph
@@ -6,6 +8,8 @@ from langchain_core.documents import Document
 from typing import List, Dict, Any
 
 import time
+
+from tqdm import tqdm
 
 
 class KGBuilder:
@@ -50,9 +54,13 @@ class KGBuilder:
             for chunk in chunks_dicts
         ]
 
+        # LangChain handles extraction + schema enforcement
+        # TODO  ( uncomment when access to GPU is available)
+        #graph_docs = asyncio.run(self.transformer.aconvert_to_graph_documents(documents))
+
         # Sequential extraction with throttle — avoids 429 on NVIDIA's per-minute limit
         graph_docs = []
-        for doc in documents:
+        for doc in tqdm(documents):
             graph_docs.append(self._convert_one_with_retry(doc))
             time.sleep(1.5)
         self.graph.add_graph_documents(graph_docs, include_source=True)
