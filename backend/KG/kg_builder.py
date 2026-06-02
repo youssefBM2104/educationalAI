@@ -71,7 +71,7 @@ class KGBuilder:
             chunk_id = graph_doc.source.metadata.get("chunk_id")
             if chunk_id and chunk_id in chunk_id_to_dict:
                 chunk_id_to_dict[chunk_id]["covers_concepts"] = [
-                    {"id": node.id, "name": node.id}  # LangChain uses name as ID
+                    {"id": node.id}  # LangChain uses name as ID
                     for node in graph_doc.nodes
                 ]
 
@@ -84,4 +84,3 @@ class KGBuilder:
             "total_relations": total_rels,
             "covers_concepts": chunks_dicts,
         }
-
