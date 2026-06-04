@@ -3,5 +3,4 @@ flagembedding
 qdrant-client
 sentence-transformers
 langchain-huggingface
-pymupdf
-pymupdf4llm
+docling

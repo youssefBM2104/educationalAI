@@ -1,16 +1,13 @@
 import tempfile
 import os
-import asyncio
 import logging
 
 from celery import Celery
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
-from backend.rag.ingestion import parse_and_chunk, parse_and_semantic_hierarchical_chunk
-from backend.KG.kg_builder import KGBuilder
+from backend.rag.ingestion import parse_and_semantic_hierarchical_chunk
 from backend.db.kg_client import get_kg
 
 
