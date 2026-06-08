@@ -29,7 +29,14 @@ class Settings(BaseSettings):
     # NVIDIA
     nim_api_key: str
     
+    #Ollama
+
+    OLLAMA_HOST: str = "http://ollama:11434"
+    VLM_MODEL: str = "moondream"  # swap to llava:7b when GPU is available
+    VLM_ENRICHMENT_ENABLED: bool = True  # set False to skip enrichment during dev
+
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
 
 settings = Settings()

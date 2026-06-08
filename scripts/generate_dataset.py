@@ -56,7 +56,9 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.oauth2 import service_account
-
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.base_models import InputFormat
 
 # =============================================================================
 # CONFIGURATION
@@ -214,23 +216,31 @@ def convert_to_markdown(file_bytes: bytes, extension: str) -> str:
         tmp_path = tmp.name
     try:
         if extension.lower() == ".pdf":
-            return _parse_pdf_pymupdf(tmp_path)
+            return _parse_pdf_docling(tmp_path)
         else:
             result = _markitdown.convert(tmp_path)
             return result.text_content or ""
     finally:
         os.unlink(tmp_path)
 
-def _parse_pdf_pymupdf(file_path: str) -> str:
-    doc = fitz.open(file_path)
-    pages = []
-    for page_num, page in enumerate(doc, start=1):
-        text = page.get_text("markdown")
-        if text.strip():
-            pages.append(f"<!-- page {page_num} -->\n{text}")
-    doc.close()
-    return "\n\n".join(pages)
+_docling_converter: DocumentConverter | None = None
 
+def _get_docling_converter() -> DocumentConverter:
+    global _docling_converter
+    if _docling_converter is None:
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_formula_enrichment = True
+        _docling_converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+    return _docling_converter
+
+def _parse_pdf_docling(file_path: str) -> str:
+    converter = _get_docling_converter()
+    result = converter.convert(file_path)
+    return result.document.export_to_markdown()
 # =============================================================================
 # CHUNKING
 # =============================================================================

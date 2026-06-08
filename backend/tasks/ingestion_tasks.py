@@ -1,16 +1,13 @@
 import tempfile
 import os
-import asyncio
 import logging
 
 from celery import Celery
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from backend.core.config import settings
 from backend.db.postgre import SessionLocal, Document, DocumentStatus
 from backend.db.minio_client import download_file, upload_file
-from backend.rag.ingestion import parse_and_chunk, parse_and_semantic_hierarchical_chunk
-from backend.KG.kg_builder import KGBuilder
+from backend.etl.ingestion import parse_and_semantic_hierarchical_chunk
 from backend.db.kg_client import get_kg
 
 
@@ -31,7 +28,7 @@ celery_app.conf.update(
 
 @celery_app.task(bind=True)
 def process_document(self, document_id: str, minio_key: str, course_id: str):
-    from backend.rag.embedder import embed_chunks
+    from backend.etl.embedder import embed_chunks
     logger.info("[%s] Starting ingestion — document_id=%s minio_key=%s course_id=%s",
                 self.request.id, document_id, minio_key, course_id)
     db = SessionLocal()
