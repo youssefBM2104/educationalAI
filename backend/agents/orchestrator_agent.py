@@ -1,42 +1,45 @@
-from backend.core.models import MODELS
+import logging
+
 from langchain_core.messages import SystemMessage, HumanMessage
+
+from backend.core.models import MODELS
+from backend.agents.state import AgentState
+
+logger = logging.getLogger(__name__)
 
 llm = MODELS["qwen"]
 
+VALID_INTENTS = ("exam", "lecture", "tutoring")
+DEFAULT_INTENT = "tutoring"
+
 ROUTING_PROMPT = """
 You are an orchestrator in an educational AI system.
-Your job is to classify the user's intent into exactly one of these categories:
+Classify the user's request into exactly one intent:
 
-- "exam"     : the user wants to generate questions, take a quiz, or be graded
-- "lecture"  : the user wants a course, a summary, slides, or educational content
-- "tutoring" : the user wants explanations, help understanding, or a learning path
+- "exam"     : generate questions, take a quiz
+- "lecture"  : a course, a summary, slides, or educational content
+- "tutoring" : explanations, help understanding, or a learning path
 
 Respond with ONLY one word: exam or lecture or tutoring.
-No explanation, no punctuation, just the word.
-"""
+""".strip()
 
-def orchestrator_agent(state):
-    messages = [
+
+def orchestrator_agent(state: AgentState) -> dict:
+    """Node: classify user query intent and write to state."""
+    response = llm.invoke([
         SystemMessage(content=ROUTING_PROMPT),
-        HumanMessage(content=state["query"])
-    ]
-    
-    response = llm.invoke(messages)
-    
-    # cleaning
+        HumanMessage(content=state["query"]),
+    ])
     intent = response.content.strip().lower()
-    
+
+    if intent not in VALID_INTENTS:
+        logger.warning("Invalid intent %r → falling back to %s", intent, DEFAULT_INTENT)
+        intent = DEFAULT_INTENT
+
+    logger.info("Routed query → intent=%s", intent)
     return {"intent": intent}
 
 
-
-#fucntion for routing 
-def route_intent(state):
-    intent = state["intent"]
-    
-    if intent == "exam":
-        return "generator"
-    elif intent == "lecture":
-        return "lecture"
-    else:
-        return "tutoring"
+def route_intent(state: AgentState) -> str:
+    """Conditional edge: return intent string for graph routing."""
+    return state["intent"]

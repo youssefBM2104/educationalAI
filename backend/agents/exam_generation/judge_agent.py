@@ -1,113 +1,159 @@
-from backend.core.models import MODELS
+import logging
+
+from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage
-import json
+
+from backend.core.models import MODELS
+from backend.agents.state import ExamState
+
+logger = logging.getLogger(__name__)
 
 llm = MODELS["nemotron"]
 
-JUDGE_PROMPT = """
-You are an expert evaluator agent in a multi-agent exam system.
-Your role is to assess both the quality of a generated exam question AND the quality of the student's answer.
 
-You will receive:
-- The generated question
-- The correct answer and grading rubric (produced by the Generator)
-- The student's final answer and their step-by-step reasoning (produced by the Solver)
-- The original context chunks the question was based on
+# --- Output schema ---
 
-Evaluate the following criteria:
+class MCQJudgement(BaseModel):
+    relevance_pass: bool = Field(description="Question + correct answer are relevant and on-topic, no invented facts")
+    answer_grounding_pass: bool = Field(description="Correct answer derivable from the real chunks")
+    distractor_quality_pass: bool = Field(description="Wrong options plausible but clearly incorrect per KG")
+    path_coverage_pass: bool = Field(description="Solver's reasoning traverses the path in order")
+    solver_correct: bool = Field(description="Solver's answer matches the correct answer")
+    feedback: str = Field(description="Actionable note for the Generator on what to fix")
 
-1. Question clarity       : is the question unambiguous, precise, and well-formulated ?
-2. Question relevance     : is the question strictly grounded in the provided context ? No invented facts ?
-3. Answer correctness     : does the student's final answer match the correct answer and satisfy the rubric ?
-4. Reasoning quality      : is the student's reasoning logical, coherent, and consistent with their final answer ?
-5. Overall difficulty     : is the difficulty level moderate to hard and appropriate for an exam ?
 
-Scoring rules:
-- Each score is between 0.0 and 1.0
-- overall_score is the weighted average: clarity(0.2) + relevance(0.25) + correctness(0.3) + reasoning(0.15) + difficulty(0.1)
-- decision must be "retry" if overall_score is below 0.75, otherwise "done"
-- If decision is "retry", feedback must clearly explain what the Generator should fix
+class EssayJudgement(BaseModel):
+    relevance_pass: bool = Field(description="Question + model answer are relevant and on-topic, no invented facts")
+    answer_grounding_pass: bool = Field(description="Model answer derivable from the real chunks")
+    path_coverage_pass: bool = Field(description="Solver's reasoning traverses the path in order")
+    solver_correct: bool = Field(description="Solver's answer matches the model answer")
+    feedback: str = Field(description="Actionable note for the Generator on what to fix")
 
-Output a valid JSON and nothing else:
-{{
-    "question_clarity_score": <0.0 to 1.0>,
-    "question_relevance_score": <0.0 to 1.0>,
-    "answer_correctness_score": <0.0 to 1.0>,
-    "reasoning_quality_score": <0.0 to 1.0>,
-    "difficulty_score": <0.0 to 1.0>,
-    "overall_score": <0.0 to 1.0>,
-    "feedback": "<actionable explanation for the Generator if retry, or confirmation if done>",
-    "decision": "<retry or done>"
-}}
 
---- QUESTION ---
-{generated_question}
+# --- Helpers ---
 
---- CORRECT ANSWER & GRADING RUBRIC ---
-Correct answer: {correct_answer}
-Rubric: {grading_rubric}
+def _format_kg(triples: list | None) -> str:
+    if not triples:
+        return "(no relations available)"
+    return "\n".join(
+        f"{t.get('source')} --[{t.get('relation')}]--> {t.get('target')}" for t in triples
+    )
 
---- STUDENT ANSWER ---
-Final answer: {solver_answer}
-Step-by-step reasoning: {structured_reasoning}
 
---- CONTEXT ---
-{rag_chunks}
+def _format_chunks(chunks: list | None) -> str:
+    if not chunks:
+        return "(no chunks available)"
+    return "\n\n".join(f"[{c.get('chunk_id', '?')}] {c.get('text', '')}" for c in chunks)
+
+
+def _format_question(gq: dict, question_type: str) -> str:
+    lines = [f"Question: {gq.get('question', '')}"]
+    if question_type == "mcq":
+        for key, val in (gq.get("choices") or {}).items():
+            lines.append(f"{key}. {val}")
+        lines.append(f"Correct option: {gq.get('correct_option')}")
+        lines.append(f"Explanation: {gq.get('explanation', '')}")
+    else:
+        lines.append(f"Model answer: {gq.get('model_answer', '')}")
+    return "\n".join(lines)
+
+
+def _build_prompt(state: ExamState, question_type: str) -> str:
+    distractor_criterion = (
+        "- **Distractor quality**: are the wrong options plausible but clearly incorrect per the KG?\n"
+        if question_type == "mcq" else ""
+    )
+    return f"""# Role
+
+You are the **Judge** in a multi-agent exam-generation pipeline, with FULL knowledge-graph access.
+Evaluate the **quality of the QUESTION** (not the student's performance), using the generator's
+correct answer as the reference.
+
+# Criteria
+
+- **Relevance**: are the question + correct answer relevant and on-topic for the source chunks (no invented facts)?
+- **Answer grounding**: is the correct answer derivable from the source chunks (directly or via multi-hop)?
+{distractor_criterion}- **Path coverage**: does the SOLVER's reasoning traverse the reasoning path below in order (not a shortcut)?
+- Also report **solver_correct**: does the solver's answer match the correct answer?
+
+# Question
+
+{_format_question(state["generated_question"], question_type)}
+
+# Reasoning path (correct)
+
+{state.get("kg_path")}
+
+# Source chunks (real)
+
+{_format_chunks(state.get("chunk_bundle"))}
+
+# Knowledge graph (full)
+
+{_format_kg(state.get("kg_context"))}
+
+# Solver output (simulated student)
+
+Answer: {state.get("solver_answer")}
+Reasoning: {state.get("solver_reasoning")}
 """
 
-def judge_node(state):
-    messages = [
-        SystemMessage(content=JUDGE_PROMPT.format(
-            generated_question  = state["generated_question"],
-            grading_rubric      = state["grading_rubric"],
-            correct_answer      = state["correct_answer"],
-            solver_answer       = state["solver_answer"],
-            structured_reasoning= state["structured_reasoning"],
-            rag_chunks          = state["rag_chunks"]
-        ))
-    ]
 
-    response = llm.invoke(messages)
+def _decide(question_type: str, ev, solver_correct: bool) -> tuple[bool, str]:
+    # Generator-target failures → regenerate (question broken)
+    if not ev.relevance_pass or not ev.answer_grounding_pass:
+        return False, "regenerate: question broken (grounding/relevance)"
+    if question_type == "mcq" and not ev.distractor_quality_pass:
+        return False, "regenerate: question broken (distractor quality)"
+    # Solver-target: path coverage fails but solver still got it → too easy
+    if not ev.path_coverage_pass and solver_correct:
+        return False, "regenerate: question too easy (solver shortcut)"
+    # Otherwise keep; if solver could not solve, flag difficulty calibration
+    if not solver_correct:
+        return True, "keep: calibrate difficulty up (solver could not solve)"
+    return True, "ok"
 
-    content = response.content.strip().removeprefix("```json").removesuffix("```").strip()
-    parsed = json.loads(content)
 
-    # If decision is "done", we add the question in the list of questions
-    if parsed["decision"] == "done":
-        current_questions = state.get("exam_questions", [])
-        updated_questions = current_questions + [{
-            "question"      : state["generated_question"],
-            "correct_answer": state["correct_answer"],
-            "grading_rubric": state["grading_rubric"],
-            "score"         : parsed["overall_score"]
-        }]
-        return {
-            "judge_score"    : parsed["overall_score"],
-            "judge_feedback" : parsed["feedback"],
-            "decision"       : "done",
-            "exam_questions" : updated_questions,
-            "iteration"      : 0  # reset for the next question
-        }
+# --- Node ---
+
+def judge_agent(state: ExamState) -> dict:
+    question_type = state["question_type"]
+    schema = MCQJudgement if question_type == "mcq" else EssayJudgement
+    structured_llm = llm.with_structured_output(schema)
+
+    ev = structured_llm.invoke([SystemMessage(content=_build_prompt(state, question_type))])
+
+    # MCQ correctness is deterministic; essay relies on the judge's assessment
+    if question_type == "mcq":
+        solver_correct = (
+            str(state.get("solver_answer", "")).strip().upper()
+            == str(state.get("correct_answer", "")).strip().upper()
+        )
     else:
-        return {
-            "judge_score"   : parsed["overall_score"],
-            "judge_feedback": parsed["feedback"],
-            "decision"      : "retry"
-        }
+        solver_correct = ev.solver_correct
+
+    passed, diagnosis = _decide(question_type, ev, solver_correct)
+
+    feedback = {
+        "relevance_pass": ev.relevance_pass,
+        "answer_grounding_pass": ev.answer_grounding_pass,
+        "path_coverage_pass": ev.path_coverage_pass,
+        "solver_correct": solver_correct,
+        "diagnosis": diagnosis,
+        "notes": ev.feedback,
+    }
+    if question_type == "mcq":
+        feedback["distractor_quality_pass"] = ev.distractor_quality_pass
+
+    logger.info("Judge: passed=%s diagnosis=%s", passed, diagnosis)
+    return {"judge_passed": passed, "judge_feedback": feedback}
 
 
-def should_retry(state):
-    # "retry" to much time
-    if state.get("iteration", 0) >= 4:
-        return "next_question"
-    
-    if state["decision"] == "retry":
-        return "generator"
-    else:
-        validated    = len(state.get("exam_questions", []))
-        target       = state.get("num_questions_target", 5)
-        
-        if validated < target:
-            return "generator"  # we continue to create questions
-        else:
-            return END
+# --- Routing (conditional edge after judge) ---
+
+def route_after_judge(state: ExamState) -> str:
+    if state["judge_passed"]:
+        return "accept"
+    if state.get("iteration", 0) >= state.get("max_iterations", 4):
+        return "give_up"
+    return "regenerate"

@@ -1,33 +1,43 @@
-from langgraph.graph import StateGraph, START, END
-from typing import TypedDict
+from typing import TypedDict, NotRequired, Literal
 
 class AgentState (TypedDict):
     user_id: str
+    course_id: str
     query: str
-    intent: str
-    rag_chunks: list
-    #kg_nodes : list           # Use the cover concpets of the chunks
-    final_output: str
+    intent: NotRequired[str]
+    rag_chunks: NotRequired[list]
+    kg_context: NotRequired[list]
+    final_output: NotRequired[str]      
 
-    # --- Exam ---
+class ExamState(AgentState):
 
-    generated_question: str    # None for Tutoring
-    grading_rubric : str
-    correct_answer : str
-    exam_questions: list
-    num_questions_target : int
+    # --- Exam request ---
+    question_type: NotRequired[Literal["mcq", "essay"]]
+    difficulty: NotRequired[Literal["easy", "medium", "hard"]]
+    num_questions_target: NotRequired[int]
 
-    structured_reasoning : str
-    solver_answer: str         # None for Lecture
-            
-    judge_score: float         # None for Tutoring
-    decision : str
+    # --- Generator output ---
+    kg_path: NotRequired[list]
+    generated_question: NotRequired[dict]
+    correct_answer: NotRequired[str]
+    chunk_bundle: NotRequired[list]
+    marking_scheme: NotRequired[str]
 
-    iteration: int             
+    # --- Solver input / output ---
+    chunk_pool: NotRequired[list]
+    solver_answer: NotRequired[str]
+    solver_reasoning: NotRequired[str]
 
-    # --- Lecture ---
-    slide_outline: list        # None for Exam
+    # --- Judge output ---
+    judge_passed: NotRequired[bool]
+    judge_feedback: NotRequired[dict]
 
-    # --- Tutoring ---
-    student_profile: dict      # None for Lecture
-    learning_gaps: list        
+    # --- Loop control ---
+    iteration: NotRequired[int]
+    max_iterations: NotRequired[int]
+
+    # --- Exam set ---
+    difficulty_plan: NotRequired[list] 
+    current_index: NotRequired[int]
+    exam_questions: NotRequired[list] # passed + failed questions
+    exam_set: NotRequired[list] # final exam set
