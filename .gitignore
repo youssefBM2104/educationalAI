@@ -228,7 +228,12 @@ CLAUDE.md
 .claude/
 # Secrets
 .env
+.env.vast
+.env.local
 service_account.json
+
+# GPU Docker Compose override (not committed — use with: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d)
+docker-compose.gpu.yml
 
 # Generated data
 data/
