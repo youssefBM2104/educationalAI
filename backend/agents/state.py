@@ -41,3 +41,23 @@ class ExamState(AgentState):
     current_index: NotRequired[int]
     exam_questions: NotRequired[list] # passed + failed questions
     exam_set: NotRequired[list] # final exam set
+
+class LectureState(AgentState):
+ 
+    # --- Lecture request ---
+    output_format: NotRequired[Literal["pptx", "pdf"]]
+ 
+    # --- Planner output ---
+    lecture_plan: NotRequired[dict]     # { course_title, estimated_slides, sections[] }
+ 
+    # --- Content Generator output ---
+    lecture_content: NotRequired[list]  # list of { order, section_title, explanation,
+                                        #            key_points, example, speaker_notes }
+ 
+    # --- Slide Builder output ---
+    lecture_slides: NotRequired[dict]   # { slides: [ { slide_number, type, title,
+                                        #               bullets, visual_hint, speaker_notes } ] }
+ 
+    # --- Export output ---
+    lecture_output_path: NotRequired[str]   # path to the generated .pptx or .pdf file
+    lecture_output_bytes: NotRequired[bytes]  # raw bytes for API response if needed
