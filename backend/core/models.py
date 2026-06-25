@@ -1,45 +1,42 @@
-from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
-
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from backend.core.config import settings
 
 MODELS = {
 
-    # ===== locals via Ollama =====
-
-    "qwen": ChatOllama(
+    "qwen": ChatNVIDIA(
         model="qwen3.5",
+        api_key=settings.nim_api_key,
         temperature=0
     ),
 
-    "gpt_oss": ChatOllama(
+    "gpt_oss": ChatNVIDIA(
         model="gpt-oss:20b",
+        api_key=settings.nim_api_key,
         temperature=0
     ),
 
-    "gemma": ChatOllama(
+    "gemma": ChatNVIDIA(
         model="gemma4",
+        api_key=settings.nim_api_key,
         temperature=0.2
     ),
 
-    "minimax": ChatOllama(
+    "minimax": ChatNVIDIA(
     model="minimax-m2:cloud",
+    api_key=settings.nim_api_key,
     temperature=0
     ),
 
 
-    # ===== via API OpenAI =====
-
-    "glm": ChatOpenAI(
+    "glm": ChatNVIDIA(
         model="glm-5.1",
-        base_url="http://localhost:8000/v1",
-        api_key="your_api_key",
+        api_key=settings.nim_api_key,
         temperature=0
     ),
 
-    "nemotron": ChatOpenAI(
+    "nemotron": ChatNVIDIA(
         model="nemotron",
-        base_url="http://localhost:8001/v1",
-        api_key="your_api_key",
+        api_key=settings.nim_api_key,
         temperature=0
     )
 }
