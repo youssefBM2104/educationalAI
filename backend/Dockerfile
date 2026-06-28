@@ -1,5 +1,11 @@
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxcb1 \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements-base.txt .
@@ -16,4 +22,3 @@ COPY . ./backend/
 
 RUN adduser --disabled-password --gecos "" celeryuser && \
     chown -R celeryuser:celeryuser /app
-USER celeryuser
