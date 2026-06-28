@@ -41,7 +41,7 @@ import asyncio
 import tempfile
 import time
 
-import fitz
+import re
 import pandas as pd
 import httpx
 from dotenv import load_dotenv
@@ -59,6 +59,7 @@ from google.oauth2 import service_account
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat
+from docling.datamodel.accelerator_options import AcceleratorOptions, AcceleratorDevice
 
 # =============================================================================
 # CONFIGURATION
@@ -80,16 +81,17 @@ CHUNK_SIZE    = 800
 CHUNK_OVERLAP = 100
 
 # ---------------------------------------------------------------------------
-# LLM Provider — change PROVIDER to switch
-# Options: "nim" | "openrouter" | "groq" | "together"
+# LLM Provider — set DATASET_LLM_PROVIDER env var to switch
+# Options: "nim" | "openrouter" | "groq" | "together" | "ollama"
 # ---------------------------------------------------------------------------
-PROVIDER = "nim"
+PROVIDER = os.getenv('DATASET_LLM_PROVIDER', 'nim')
 
 MODELS = {
     "nim":        "meta/llama-3.1-8b-instruct",
     "openrouter": "meta-llama/llama-3.1-8b-instruct:free",
     "groq":       "llama-3.1-8b-instant",
     "together":   "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+    "ollama":     os.getenv("DATASET_LLM_MODEL", "qwen3:14b"),
 }
 
 BASE_URLS = {
@@ -97,6 +99,7 @@ BASE_URLS = {
     "openrouter": "https://openrouter.ai/api/v1",
     "groq":       "https://api.groq.com/openai/v1",
     "together":   "https://api.together.xyz/v1",
+    "ollama":     os.getenv("DATASET_LLM_BASE_URL", "http://localhost:11434/v1"),
 }
 
 API_KEY_ENV = {
@@ -104,6 +107,7 @@ API_KEY_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "groq":       "GROQ_API_KEY",
     "together":   "TOGETHER_API_KEY",
+    "ollama":     None,
 }
 
 QA_PER_CHUNK = 1          # QA pairs per chunk — 1 is efficient for large docs
@@ -114,7 +118,7 @@ QA_PER_CHUNK = 1          # QA pairs per chunk — 1 is efficient for large docs
 # NIM free tier handles ~50 concurrent requests comfortably
 # Lower this if you see 429 rate-limit errors
 # ---------------------------------------------------------------------------
-MAX_CONCURRENT = 5
+MAX_CONCURRENT = 1
 
 # Resume support: skip chunks already in output CSV
 RESUME = True
@@ -230,6 +234,12 @@ def _get_docling_converter() -> DocumentConverter:
     if _docling_converter is None:
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_formula_enrichment = True
+        device_str = os.getenv('DOCLING_DEVICE', 'cpu')
+        device = AcceleratorDevice.CUDA if device_str == 'cuda' else AcceleratorDevice.CPU
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=4,
+            device=device,
+        )
         _docling_converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
@@ -288,8 +298,10 @@ Format:
   ]
 }}"""
 
-def _get_api_key() -> str:
+def _get_api_key() -> str | None:
     key_name = API_KEY_ENV[PROVIDER]
+    if key_name is None:
+        return None
     api_key = os.environ.get(key_name)
     if not api_key:
         raise EnvironmentError(
@@ -315,10 +327,10 @@ async def generate_qa_async(
     Returns a list of row dicts ready to save, or [] on failure.
     """
     url = f"{BASE_URLS[PROVIDER]}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {_get_api_key()}",
-        "Content-Type": "application/json",
-    }
+    api_key = _get_api_key()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     payload = {
         "model": MODELS[PROVIDER],
         "messages": [
@@ -332,7 +344,8 @@ async def generate_qa_async(
     async with semaphore:
         for attempt in range(6):  # up to 6 attempts per chunk
             try:
-                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+                timeout = 120.0 if PROVIDER == "ollama" else 30.0
+                response = await client.post(url, headers=headers, json=payload, timeout=timeout)
 
                 if response.status_code == 429:
                     wait = 2 ** attempt  # 1s, 2s, 4s, 8s, 16s, 32s backoff
@@ -346,6 +359,9 @@ async def generate_qa_async(
 
                 data = response.json()
                 raw = data["choices"][0]["message"]["content"].strip()
+
+                # Strip <think>...</think> blocks (Qwen3 and other reasoning models)
+                raw = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
 
                 # Strip markdown fences if model adds them
                 if raw.startswith("```"):
