@@ -1,10 +1,9 @@
 import logging
 from FlagEmbedding import BGEM3FlagModel
-import torch
+from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True, device=device)
+model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, device=settings.embedding_device)
 logger.info("BGE-M3 model loaded")
 
 def embed_chunks(chunks: list[dict]) -> list[dict]:

@@ -10,6 +10,7 @@ import re
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat
+from docling.datamodel.accelerator_options import AcceleratorOptions, AcceleratorDevice
 from docling_core.types.doc import PictureItem
 import httpx
 import base64
@@ -20,13 +21,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_markitdown = MarkItDown()
+
 def parse(file_path: str) -> str:
     suffix = Path(file_path).suffix.lower()
     if suffix == ".pdf":
         return _parse_pdf_docling(file_path)
     else:
-        md = MarkItDown()
-        result = md.convert(file_path)
+        result = _markitdown.convert(file_path)
         return result.text_content
 
 _docling_converter: DocumentConverter | None = None
@@ -38,6 +40,11 @@ def _get_docling_converter() -> DocumentConverter:
         pipeline_options.generate_picture_images = True
         pipeline_options.do_formula_enrichment = True
         pipeline_options.images_scale = 2.0
+        device = AcceleratorDevice.CUDA if settings.docling_device == 'cuda' else AcceleratorDevice.CPU
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=4,
+            device=device,
+        )
         _docling_converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
@@ -52,7 +59,7 @@ def _describe_image(pil_image) -> str:
     image_b64 = base64.standard_b64encode(buffer.getvalue()).decode()
 
     payload = {
-        "model": settings.VLM_MODEL,
+        "model": settings.vlm_model,
         "prompt": (
             "Describe exactly what is shown in this chart or figure. "
             "Read all axis labels, tick values, legend entries, and titles literally as written — "
@@ -67,7 +74,7 @@ def _describe_image(pil_image) -> str:
     for attempt in range(2):  # 1 retry on empty response
         try:
             response = httpx.post(
-                f"{settings.OLLAMA_HOST}/api/generate",
+                f"{settings.ollama_host}/api/generate",
                 json=payload,
                 timeout=120.0,
             )
@@ -84,7 +91,7 @@ def _describe_image(pil_image) -> str:
             logger.warning(f"VLM call failed (attempt {attempt + 1}/2): {e}")
             time.sleep(3)
 
-    return "<!-- image -->"  # both attempts failed or returned empty
+    return "<!-- image-failed -->"  # both attempts failed or returned empty
 
 
 def _sanitize_formula_output(markdown: str) -> str:
@@ -99,6 +106,14 @@ def _sanitize_formula_output(markdown: str) -> str:
         markdown
     )
 
+def _ollama_reachable() -> bool:
+    try:
+        httpx.get(f"{settings.ollama_host}/api/tags", timeout=5.0).raise_for_status()
+        return True
+    except Exception:
+        return False
+
+
 def _parse_pdf_docling(file_path: str) -> str:
     converter = _get_docling_converter()
     result = converter.convert(file_path)
@@ -107,7 +122,7 @@ def _parse_pdf_docling(file_path: str) -> str:
     # Remove hallucinated repetition loops from formula enrichment
     markdown = _sanitize_formula_output(markdown)
 
-    if not settings.VLM_ENRICHMENT_ENABLED:
+    if not settings.vlm_enrichment_enabled:
         return markdown
 
     picture_items = [
@@ -115,6 +130,13 @@ def _parse_pdf_docling(file_path: str) -> str:
         for item, _level in result.document.iterate_items()
         if isinstance(item, PictureItem)
     ]
+
+    if not picture_items:
+        return markdown
+
+    if not _ollama_reachable():
+        logger.warning("Ollama unreachable — skipping VLM image enrichment for %s", file_path)
+        return markdown
 
     for item in picture_items:
         if "<!-- image -->" not in markdown:
