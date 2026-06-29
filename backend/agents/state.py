@@ -61,3 +61,18 @@ class LectureState(AgentState):
     # --- Export output ---
     lecture_output_path: NotRequired[str]   # path to the generated .pptx or .pdf file
     lecture_output_bytes: NotRequired[bytes]  # raw bytes for API response if needed
+
+class LearningMaterialsState(AgentState):
+ 
+    # --- Request ---
+    mindmap_format: NotRequired[Literal["mermaid", "markmap"]]       # mindmap only
+    detail_level: NotRequired[Literal["short", "medium", "long"]]   # summary only
+ 
+    # --- Mindmap pipeline ---
+    mindmap_tree: NotRequired[dict]          # nested MindmapNode tree from MindmapAgent
+    mindmap_output_path: NotRequired[str]    # path to .md or .html on disk
+    mindmap_output_bytes: NotRequired[bytes]
+ 
+    # --- Summary pipeline ---
+    extracted_ideas: NotRequired[dict]       # ExtractedIdeas dict from ExtractorAgent
+    summary: NotRequired[dict]              # Summary dict from WriterAgent
