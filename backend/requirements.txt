@@ -22,4 +22,5 @@ langchain-community
 langchain-experimental
 json-repair
 langchain-neo4j
+langgraph
 qdrant-client
