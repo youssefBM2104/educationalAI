@@ -43,7 +43,7 @@ def _format_chunks(chunks: list | None) -> str:
     if not chunks:
         return "(no chunks available)"
     return "\n\n".join(
-        f"[{c.get('chunk_id', '?')}] {c.get('text', '')}" for c in chunks
+        f"[{c.get('document_id')}#{c.get('chunk_index')}] {c.get('text', '')}" for c in chunks
     )
 
 

@@ -6,7 +6,7 @@ class AgentState (TypedDict):
     query: str
     intent: NotRequired[str]
     rag_chunks: NotRequired[list]
-    kg_context: NotRequired[list]
+    kg_context: NotRequired[dict]
     final_output: NotRequired[str]      
 
 class ExamState(AgentState):

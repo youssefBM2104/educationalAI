@@ -10,6 +10,10 @@ MAX_DISTRACTORS = 6
 
 # --- Helpers ---
 
+def _chunk_key(chunk: dict) -> tuple:
+    return (chunk.get("document_id"), chunk.get("chunk_index"))
+
+
 def _concept_ids(chunk: dict) -> set[str]:
     out = set()
     for c in chunk.get("covers_concepts", []) or []:
@@ -37,16 +41,16 @@ def build_chunk_pool(state: ExamState) -> dict:
         return {"chunk_pool": list(bundle)}
 
     rag_chunks = state.get("rag_chunks", []) or []
-    bundle_ids = {c.get("chunk_id") for c in bundle}
+    bundle_keys = {_chunk_key(c) for c in bundle}
     wrong_concepts = _distractor_concepts(state.get("generated_question", {}), state.get("kg_path", []))
 
     distractors = [
         c for c in rag_chunks
-        if c.get("chunk_id") not in bundle_ids and (_concept_ids(c) & wrong_concepts)
+        if _chunk_key(c) not in bundle_keys and (_concept_ids(c) & wrong_concepts)
     ]
 
     if not distractors:
-        distractors = [c for c in rag_chunks if c.get("chunk_id") not in bundle_ids]
+        distractors = [c for c in rag_chunks if _chunk_key(c) not in bundle_keys]
 
     if len(distractors) > MAX_DISTRACTORS:
         distractors = random.sample(distractors, MAX_DISTRACTORS)

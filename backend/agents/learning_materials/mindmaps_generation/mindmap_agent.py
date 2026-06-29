@@ -38,12 +38,13 @@ class MindmapTree(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _format_kg(triples: list | None) -> str:
-    if not triples:
+def _format_kg(kg: dict | None) -> str:
+    relations = (kg or {}).get("relations", [])
+    if not relations:
         return "(no relations available)"
     return "\n".join(
-        f"{t.get('source')} --[{t.get('relation')}]--> {t.get('target')}"
-        for t in triples
+        f"{r.get('from')} --[{r.get('type')}]--> {r.get('to')}"
+        for r in relations
     )
 
 
@@ -51,20 +52,22 @@ def _format_chunks(chunks: list | None) -> str:
     if not chunks:
         return "(no chunks available)"
     return "\n\n".join(
-        f"[{c.get('chunk_id', '?')}] {c.get('text', '')}" for c in chunks
+        f"[{c.get('document_id')}#{c.get('chunk_index')}] {c.get('text', '')}" for c in chunks
     )
 
 
-def _format_kg_node_ids(triples: list | None) -> str:
-    if not triples:
+def _format_kg_node_ids(kg: dict | None) -> str:
+    kg = kg or {}
+    concepts = kg.get("concepts")
+    if not concepts:
+        concepts = set()
+        for r in kg.get("relations", []):
+            for key in ("from", "to"):
+                if r.get(key):
+                    concepts.add(str(r[key]))
+    if not concepts:
         return "(none)"
-    ids: set[str] = set()
-    for t in triples:
-        for key in ("source", "target"):
-            val = t.get(key)
-            if val:
-                ids.add(str(val))
-    return ", ".join(sorted(ids))
+    return ", ".join(sorted(str(c) for c in concepts))
 
 
 def _build_prompt(state: LearningMaterialsState) -> str:

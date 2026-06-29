@@ -54,12 +54,13 @@ class EssayQuestion(BaseModel):
 
 # --- Helpers ---
 
-def _format_kg(triples: list | None) -> str:
-    if not triples:
+def _format_kg(kg: dict | None) -> str:
+    relations = (kg or {}).get("relations", [])
+    if not relations:
         return "(no relations available)"
     return "\n".join(
-        f"{t.get('source')} --[{t.get('relation')}]--> {t.get('target')}"
-        for t in triples
+        f"{r.get('from')} --[{r.get('type')}]--> {r.get('to')}"
+        for r in relations
     )
 
 
@@ -67,7 +68,7 @@ def _format_chunks(chunks: list | None) -> str:
     if not chunks:
         return "(no chunks available)"
     return "\n\n".join(
-        f"[{c.get('chunk_id', '?')}] {c.get('text', '')}" for c in chunks
+        f"[{c.get('document_id')}#{c.get('chunk_index')}] {c.get('text', '')}" for c in chunks
     )
 
 

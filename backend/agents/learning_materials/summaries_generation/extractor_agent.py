@@ -34,7 +34,7 @@ class Idea(BaseModel):
         description="One concise sentence capturing this idea, grounded in the source chunks"
     )
     source_chunk_id: str = Field(
-        description="chunk_id of the chunk this idea was extracted from"
+        description="source chunk label as 'document_id#chunk_index'"
     )
 
 
@@ -58,20 +58,22 @@ def _format_chunks(chunks: list | None) -> str:
     if not chunks:
         return "(no chunks available)"
     return "\n\n".join(
-        f"[{c.get('chunk_id', '?')}] {c.get('text', '')}" for c in chunks
+        f"[{c.get('document_id')}#{c.get('chunk_index')}] {c.get('text', '')}" for c in chunks
     )
 
 
-def _format_kg_node_ids(triples: list | None) -> str:
-    if not triples:
+def _format_kg_node_ids(kg: dict | None) -> str:
+    kg = kg or {}
+    concepts = kg.get("concepts")
+    if not concepts:
+        concepts = set()
+        for r in kg.get("relations", []):
+            for key in ("from", "to"):
+                if r.get(key):
+                    concepts.add(str(r[key]))
+    if not concepts:
         return "(none)"
-    ids: set[str] = set()
-    for t in triples:
-        for key in ("source", "target"):
-            val = t.get(key)
-            if val:
-                ids.add(str(val))
-    return ", ".join(sorted(ids))
+    return ", ".join(sorted(str(c) for c in concepts))
 
 
 def _build_prompt(state: LearningMaterialsState, idea_limit: int) -> str:
@@ -94,7 +96,7 @@ Read all the source chunks below and extract the key ideas, grouped by concept.
     - "essential" → must appear in any summary regardless of length
     - "detail"    → included only in medium or long summaries
 - Each idea must be a single concise sentence grounded in the source chunks.
-- Always fill `source_chunk_id` with the chunk_id the idea was drawn from.
+- Always fill `source_chunk_id` with the [document_id#chunk_index] label of the source chunk.
 - Do NOT invent ideas absent from the chunks.
 - Do NOT write prose or transitions — that is the Writer's job.
 
