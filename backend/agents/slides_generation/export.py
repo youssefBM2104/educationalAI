@@ -147,7 +147,7 @@ def _build_pdf(slides: list[dict], course_title: str) -> bytes:
 # Node
 # ---------------------------------------------------------------------------
 
-def export_agent(state: LectureState) -> dict:
+def export(state: LectureState) -> dict:
     deck = state["lecture_slides"]
     slides = deck["slides"]
     course_title = state["lecture_plan"]["course_title"]
