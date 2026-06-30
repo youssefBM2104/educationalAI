@@ -16,13 +16,13 @@ You parse a teacher's exam request into structured parameters.
 
 Extract:
 - question_type: "mcq" if they ask for multiple-choice / a quiz; "essay" if open-ended / written answers.
-- num_questions: how many questions are requested. If not stated, use 10.
+- num_questions: how many questions are requested. If not stated, use 5.
 """.strip()
 
 
 class ExamSpec(BaseModel):
     question_type: Literal["mcq", "essay"]
-    num_questions: int = Field(default=10, description="Number of questions requested; 10 if unspecified")
+    num_questions: int = Field(default=5, description="Number of questions requested; 5 if unspecified")
 
 
 def intake_agent(state: ExamState) -> dict:

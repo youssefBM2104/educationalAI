@@ -76,3 +76,31 @@ class LearningMaterialsState(AgentState):
     # --- Summary pipeline ---
     extracted_ideas: NotRequired[dict]       # ExtractedIdeas dict from ExtractorAgent
     summary: NotRequired[dict]              # Summary dict from WriterAgent
+
+class TutoringState(AgentState):
+
+    # --- Classification ---
+    bloom_level: NotRequired[int]            # N (1..6) from BloomClassifier
+
+    # --- Socratic loop position (persists across turns) ---
+    phase: NotRequired[Literal["await_sub_answer", "await_bridge", "done"]]
+    current_level: NotRequired[int]          # k, during scaffold descent / climb back
+    sub_question: NotRequired[str]
+    expected_answer: NotRequired[str]
+    fail_streak: NotRequired[dict]           # {level: consecutive fails} -> safety cap = 3
+    next_step: NotRequired[str]              # controller hint: "ask" | "bridge"
+    teach_note: NotRequired[str]             # direct explanation to prepend (safety cap)
+
+    # --- Bridge ---
+    bridge_question: NotRequired[str]
+
+    # --- Per-turn student input ---
+    student_answer: NotRequired[str]
+
+    # --- Evaluation / diagnosis ---
+    eval_result: NotRequired[str]            # "pass" | "fail"
+    eval_notes: NotRequired[str]
+    diagnosis: NotRequired[dict]             # {status, specific_error}
+
+    # --- Output shown to the student this turn ---
+    tutor_message: NotRequired[str]
