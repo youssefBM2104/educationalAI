@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 _app = None
 
 
-# --- Graph (subgraph: assumes rag_chunks + kg_context already in state) ---
+# --- Summaries Graph ---
 
 def get_summaries_graph():
     global _app

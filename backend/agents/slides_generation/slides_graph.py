@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _app = None
 
 
-# --- Graph (subgraph: assumes rag_chunks + kg_context already in state) ---
+# --- Slides Graph ---
 
 def get_slides_graph():
     global _app

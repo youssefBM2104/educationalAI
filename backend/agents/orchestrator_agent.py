@@ -9,18 +9,20 @@ logger = logging.getLogger(__name__)
 
 llm = MODELS["qwen"]
 
-VALID_INTENTS = ("exam", "lecture", "tutoring")
+VALID_INTENTS = ("exam", "slides", "mindmap", "summary", "tutoring")
 DEFAULT_INTENT = "tutoring"
 
 ROUTING_PROMPT = """
 You are an orchestrator in an educational AI system.
 Classify the user's request into exactly one intent:
 
-- "exam"     : generate questions, take a quiz
-- "lecture"  : a course, a summary, slides, or educational content
-- "tutoring" : explanations, help understanding, or a learning path
+- "exam"     : generate exam questions, a quiz, a test
+- "slides"   : build lecture slides / a slide deck / a presentation
+- "mindmap"  : build a mind map / concept map
+- "summary"  : summarize content into a written summary
+- "tutoring" : explanations, help understanding, or a step-by-step learning path
 
-Respond with ONLY one word: exam or lecture or tutoring.
+Respond with ONLY one word: exam, slides, mindmap, summary, or tutoring.
 """.strip()
 
 

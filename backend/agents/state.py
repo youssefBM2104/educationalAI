@@ -104,3 +104,8 @@ class TutoringState(AgentState):
 
     # --- Output shown to the student this turn ---
     tutor_message: NotRequired[str]
+
+class MainState(ExamState, LectureState, LearningMaterialsState, TutoringState):
+    # Superset state for the top-level dispatcher graph: merges every pipeline's
+    # fields so subgraph outputs survive the state merge. All share AgentState.
+    pass
