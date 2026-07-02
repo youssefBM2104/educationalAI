@@ -7,7 +7,7 @@ from peft import PeftModel, LoraConfig, get_peft_model
 from trl import SFTTrainer
 from datasets import Dataset
 
-BASE_ADAPTER_PATH = "./trained_model/edu-qwen-v1"   # ton modèle fine-tuné initial
+BASE_ADAPTER_PATH = "./trained_model/edu-qwen-v1" 
 BASE_MODEL_NAME   = "Qwen/Qwen2.5-1.5B-Instruct"
 
 class ContinuousLearner:
