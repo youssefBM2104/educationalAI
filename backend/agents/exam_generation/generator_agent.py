@@ -9,7 +9,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["glm"]
+llm = MODELS["gemma"]
 
 # Difficulty is the number of concepts (chunks) on the correct path
 PATH_LENGTH_RANGES = {

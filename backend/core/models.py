@@ -4,38 +4,38 @@ from backend.core.config import settings
 MODELS = {
 
     "qwen": ChatNVIDIA(
-        model="qwen3.5",
+        model="qwen/qwen3.5-122b-a10b",
         api_key=settings.nim_api_key,
         temperature=0
     ),
 
     "gpt_oss": ChatNVIDIA(
-        model="gpt-oss:20b",
+        model="openai/gpt-oss-20b",
         api_key=settings.nim_api_key,
         temperature=0
     ),
 
     "gemma": ChatNVIDIA(
-        model="gemma4",
+        model="google/gemma-4-31b-it",
         api_key=settings.nim_api_key,
         temperature=0.2
     ),
 
     "minimax": ChatNVIDIA(
-    model="minimax-m2:cloud",
+    model="minimaxai/minimax-m2.7"  ,
     api_key=settings.nim_api_key,
     temperature=0
     ),
 
 
     "glm": ChatNVIDIA(
-        model="glm-5.1",
+        model="z-ai/glm-5.1",
         api_key=settings.nim_api_key,
         temperature=0
     ),
 
     "nemotron": ChatNVIDIA(
-        model="nemotron",
+        model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         api_key=settings.nim_api_key,
         temperature=0
     )

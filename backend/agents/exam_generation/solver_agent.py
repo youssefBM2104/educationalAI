@@ -9,7 +9,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gpt_oss"]
+llm = MODELS["gemma"]
 
 
 # --- Output schema ---
