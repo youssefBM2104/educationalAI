@@ -1,10 +1,49 @@
 import io
 import logging
+import os
+import re
+import tempfile
 from pathlib import Path
 
 from backend.agents.state import LectureState
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Filename sanitization
+# ---------------------------------------------------------------------------
+# Characters forbidden (or dangerous) in Windows filenames: < > : " / \ | ? *
+# ':' is especially dangerous: NTFS silently interprets "Foo: Bar.pptx" as
+# "create a file named 'Foo' with an Alternate Data Stream named
+# ' Bar.pptx'". That produces exactly the symptom reported — a visible
+# 0-byte file called "Thread_Synchronization" with no extension, while the
+# real bytes get written into a hidden stream nobody can see in Explorer.
+_WINDOWS_FORBIDDEN_CHARS = r'<>:"/\|?*'
+_WINDOWS_RESERVED_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+
+def _sanitize_filename(name: str, max_len: int = 150) -> str:
+    """Turn an arbitrary course title into a safe, cross-platform filename stem."""
+    # Replace forbidden characters with '-' (keeps things readable)
+    cleaned = re.sub(f"[{re.escape(_WINDOWS_FORBIDDEN_CHARS)}]", "-", name)
+    # Collapse whitespace to single underscores
+    cleaned = re.sub(r"\s+", "_", cleaned.strip())
+    # Drop any remaining control characters
+    cleaned = re.sub(r"[\x00-\x1f]", "", cleaned)
+    # Collapse repeated separators produced by the substitutions above
+    cleaned = re.sub(r"[-_]{2,}", "_", cleaned).strip("._-")
+
+    if not cleaned:
+        cleaned = "lecture"
+
+    if cleaned.upper() in _WINDOWS_RESERVED_NAMES:
+        cleaned = f"_{cleaned}"
+
+    return cleaned[:max_len]
 
 # ---------------------------------------------------------------------------
 # Optional heavy imports — only fail at call time, not at import time
@@ -153,23 +192,68 @@ def export(state: LectureState) -> dict:
     course_title = state["lecture_plan"]["course_title"]
     fmt = state.get("output_format", "pptx")
 
+    safe_stem = _sanitize_filename(course_title)
+
     if fmt == "pdf":
         raw   = _build_pdf(slides, course_title)
-        fname = f"{course_title.replace(' ', '_')}.pdf"
+        fname = f"{safe_stem}.pdf"
     else:
         raw   = _build_pptx(slides, course_title)
-        fname = f"{course_title.replace(' ', '_')}.pptx"
+        fname = f"{safe_stem}.pptx"
 
-    # Save the output 
-    # We need to decide where the output will go
-    output_dir  = Path("outputs/lectures")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # --- Sanity check: never silently write an empty/corrupt file ---
+    if not raw:
+        raise RuntimeError(
+            f"Export produced 0 bytes for format={fmt!r} — the presentation/document "
+            "was empty or the builder failed silently."
+        )
+
+    # --- Resolve output directory (absolute path avoids surprises tied to CWD) ---
+    output_dir = Path("outputs/lectures").resolve()
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        raise RuntimeError(f"Could not create output directory {output_dir}: {e}") from e
+
     output_path = output_dir / fname
-    output_path.write_bytes(raw)
+
+    # --- Atomic write: write to a temp file in the same directory, then
+    #     replace the target. This avoids partially-written files if the
+    #     process is interrupted, and avoids permission surprises since the
+    #     temp file is created explicitly rather than truncate-on-open. ---
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=output_dir, prefix=f".{safe_stem}_", suffix=".tmp", delete=False
+        ) as tmp_f:
+            tmp_f.write(raw)
+            tmp_f.flush()
+            os.fsync(tmp_f.fileno())
+            tmp_path = Path(tmp_f.name)
+
+        os.replace(tmp_path, output_path)  # atomic on both Windows and POSIX
+    except OSError as e:
+        # Clean up the temp file if the replace step failed
+        try:
+            if "tmp_path" in locals() and tmp_path.exists():
+                tmp_path.unlink()
+        except OSError:
+            pass
+        raise RuntimeError(
+            f"Failed to write export file to {output_path} "
+            f"(check disk space and write permissions on {output_dir}): {e}"
+        ) from e
+
+    # --- Verify what actually landed on disk matches what we intended ---
+    actual_size = output_path.stat().st_size
+    if actual_size != len(raw):
+        raise RuntimeError(
+            f"Export size mismatch for {output_path}: expected {len(raw)} bytes, "
+            f"found {actual_size} bytes on disk."
+        )
 
     logger.info(
         "Export: format=%s slides=%d path=%s size=%d bytes",
-        fmt, len(slides), output_path, len(raw),
+        fmt, len(slides), output_path, actual_size,
     )
 
     return {

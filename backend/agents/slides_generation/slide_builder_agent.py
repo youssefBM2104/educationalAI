@@ -105,8 +105,10 @@ def slide_builder_agent(state: LectureState) -> dict:
         SystemMessage(content=_build_prompt(state)),
         HumanMessage(content="Build the slide deck now."),
     ])
-
-    deck = result.model_dump()
+    if result is None:
+        logger.error("SlideBuilder: LLM returned None - falling back to default deck")
+    else: 
+        deck = result.model_dump()
 
     logger.info(
         "SlideBuilder: total_slides=%d (title + %d content + summary)",

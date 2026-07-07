@@ -24,3 +24,4 @@ json-repair
 langchain-neo4j
 langgraph
 qdrant-client
+reportlab
