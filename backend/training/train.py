@@ -84,7 +84,6 @@ def train():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
         train_dataset=dataset,
         dataset_text_field="text",
         max_seq_length=settings.small_ai_max_seq_length,
