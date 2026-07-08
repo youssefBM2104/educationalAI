@@ -50,7 +50,7 @@ def _load_small_ai():
             "Run 'python -m training.train' to generate the adapter."
         )
         return ChatOllama(
-            model="qwen2.5:1.5b",
+            model="qwen3:1.7b",
             temperature=0.4,
             num_predict=1024,
         )

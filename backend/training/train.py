@@ -100,8 +100,6 @@ def train():
     tokenizer.save_pretrained(settings.small_ai_output_dir)
 
     logger.info("Done. Your fine-tuned adapter is ready.")
-    logger.info(f"Next step: load it with MODELS['small_ai'] in core/models.py")
-
 
 if __name__ == "__main__":
     train()

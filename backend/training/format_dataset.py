@@ -34,8 +34,7 @@ def _format_single(item: dict) -> dict:
     return {
         "text": (
             "<|im_start|>system\n"
-            "You are a helpful educational assistant. "
-            "Answer clearly and accurately.\n"
+            "/no_think You are a helpful educational assistant.\n"
             "<|im_end|>\n"
             f"<|im_start|>user\n{item['question']}<|im_end|>\n"
             f"<|im_start|>assistant\n{item['answer']}<|im_end|>"

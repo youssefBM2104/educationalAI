@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     embedding_device: str = "cpu"
     docling_device: str = "cpu"
     # --- Base model (downloaded from HuggingFace the first time) -----------------
-    small_ai_base_model   = "Qwen/Qwen2.5-1.5B-Instruct"
+    small_ai_base_model   = "Qwen/Qwen3-1.7B"
     
     # --- Where the fine-tuned model is saved after training/train.py -------------
     small_ai_output_dir   = "./trained_model/edu-qwen-v1"
