@@ -31,28 +31,23 @@ class Settings(BaseSettings):
     embedding_device: str = "cpu"
     docling_device: str = "cpu"
     # --- Base model (downloaded from HuggingFace the first time) -----------------
-    small_ai_base_model   = "Qwen/Qwen3-1.7B"
+    small_ai_base_model: str   = "Qwen/Qwen3-1.7B"
     
     # --- Where the fine-tuned model is saved after training/train.py -------------
-    small_ai_output_dir   = "./trained_model/edu-qwen-v1"
+    small_ai_output_dir: str  = "./trained_model/edu-qwen-v1"
     
     # --- Your existing Q&A dataset (already have this, just point to it) ---------
-    small_ai_dataset_path = "../data/qa_dataset.json"
+    small_ai_dataset_path: str = "../data/qa_dataset.json"
     
-    # --- LoRA hyperparameters (tuned for 8GB RAM) ---
-    small_ai_lora_r          = 16
-    small_ai_lora_alpha      = 32
-    small_ai_lora_dropout    = 0.05
-    
-    # --- Training hyperparameters ------------------------------------------------
-    small_ai_epochs          = 3
-    small_ai_batch_size      = 2
-    small_ai_learning_rate   = 2e-4
-    small_ai_max_seq_length  = 512
-    
-    # --- Continuous learning (runs on user machine) ------------------------------
-    small_ai_min_interactions = 10   # minimum interactions before personalizing
-    small_ai_user_data_dir    = "./user_data"   # local, never uploaded to server
+    small_ai_lora_r:        int   = 16
+    small_ai_lora_alpha:    int   = 32
+    small_ai_lora_dropout:  float = 0.05
+    small_ai_epochs:        int   = 3
+    small_ai_batch_size:    int   = 2
+    small_ai_learning_rate: float = 2e-4
+    small_ai_max_seq_length: int  = 512
+    small_ai_min_interactions: int = 10
+    small_ai_user_data_dir: str   = "./user_data"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
