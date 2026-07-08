@@ -20,7 +20,7 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model
 from trl import SFTTrainer
-from training.format_dataset import load_dataset_from_file
+from training.dataset import load_dataset_from_file
 from backend.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
