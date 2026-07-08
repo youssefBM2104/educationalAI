@@ -1,4 +1,5 @@
 import logging
+import random
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -9,7 +10,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gemma"]
+llm = MODELS["glm"]
 
 # Difficulty is the number of concepts (chunks) on the correct path
 PATH_LENGTH_RANGES = {
@@ -84,6 +85,32 @@ def _concept_ids(chunk: dict) -> set[str]:
 def _select_chunk_bundle(chunks: list | None, kg_path: list[str]) -> list:
     path = {c.lower() for c in kg_path}
     return [c for c in (chunks or []) if _concept_ids(c) & path]
+
+
+def _shuffle_mcq_options(result: MCQQuestion) -> MCQQuestion:
+    """Remap A/B/C/D labels to a random permutation so the correct answer
+    isn't always in the same slot. The LLM has no reliable control over
+    where it places the correct option (it tends to default to "A"), so we
+    fix the position programmatically after generation instead of relying
+    on prompt instructions.
+    """
+    labels = ["A", "B", "C", "D"]
+    shuffled = labels[:]
+    random.shuffle(shuffled)
+    mapping = dict(zip(labels, shuffled))  # old_label -> new_label
+
+    new_choices = {mapping[old]: text for old, text in result.choices.items()}
+    new_correct = mapping[result.correct_option]
+    new_distractors = [
+        Distractor(choice_key=mapping[d.choice_key], concept_path=d.concept_path)
+        for d in result.distractor_paths
+    ]
+
+    return result.model_copy(update={
+        "choices": new_choices,
+        "correct_option": new_correct,
+        "distractor_paths": new_distractors,
+    })
 
 
 def _distractor_rule(difficulty: str) -> str:
@@ -183,6 +210,9 @@ def generator_agent(state: ExamState) -> dict:
         SystemMessage(content=_build_prompt(state, question_type, difficulty, length)),
         HumanMessage(content="Generate the question now."),
     ])
+
+    if question_type == "mcq":
+        result = _shuffle_mcq_options(result)
 
     actual_len = len(result.kg_path)
     min_len, max_len = length

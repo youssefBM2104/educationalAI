@@ -29,7 +29,7 @@ MODELS = {
 
 
     "glm": ChatNVIDIA(
-        model="z-ai/glm-5.1",
+        model="z-ai/glm-5.2",
         api_key=settings.nim_api_key,
         temperature=0
     ),
