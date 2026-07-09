@@ -9,7 +9,7 @@ from backend.agents.state import LearningMaterialsState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gemma"]
+llm = MODELS["llama31"]
 
 # Target word counts per detail level — communicated to the LLM via the prompt
 TARGET_WORDS: dict[str, str] = {

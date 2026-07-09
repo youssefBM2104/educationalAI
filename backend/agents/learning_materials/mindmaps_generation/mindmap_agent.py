@@ -8,7 +8,7 @@ from backend.agents.state import LearningMaterialsState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gemma"]
+llm = MODELS["llama31"]
 
 
 # ---------------------------------------------------------------------------

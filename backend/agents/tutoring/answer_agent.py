@@ -7,7 +7,7 @@ from backend.agents.state import TutoringState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gpt_oss"]
+llm = MODELS["gemma"]
 
 ANSWER_PROMPT = """
 ## Role
@@ -20,11 +20,12 @@ You give the **full, correct answer** to the original question.
 
 MISTAKE_PROMPT = """
 ## Role
-The student made a specific mistake while deriving the answer.
+The student reasoned about the question but made a **specific mistake**.
 
 ## Task
-- Write a short, targeted correction.
+- Write a short, targeted correction of THAT mistake, grounded in the context.
 - **Name the slip** and show the right step.
+- Stay on the topic of the question — never give generic study advice.
 - Be brief.
 """.strip()
 
@@ -55,8 +56,10 @@ def _mistake_fix(state: TutoringState) -> str:
     res = llm.invoke([
         SystemMessage(content=MISTAKE_PROMPT),
         HumanMessage(content=(
+            f"Original question: {state['query']}\n"
             f"Student attempt: {state.get('student_answer')}\n"
-            f"Specific error: {diag.get('specific_error')}"
+            f"Specific error: {diag.get('specific_error')}\n\n"
+            f"Context:\n{_context(state)}"
         )),
     ])
     return res.content.strip()
@@ -76,9 +79,11 @@ def teach_explanation(state: TutoringState) -> str:
 def answer_node(state: TutoringState) -> dict:
     diag = state.get("diagnosis") or {}
     prefix = ""
-    if diag.get("status") == "has_mistake":
+    # Only correct a real slip. On "no_attempt" (or "correct") there is nothing to fix —
+    # forcing a correction there makes the model invent generic, off-topic advice.
+    if diag.get("status") == "has_mistake" and diag.get("specific_error"):
         prefix = _mistake_fix(state) + "\n\n"
 
     final = prefix + _answer(state)
-    logger.info("Answer emitted (mistake_fix=%s)", bool(prefix))
+    logger.info("Answer emitted (status=%s mistake_fix=%s)", diag.get("status"), bool(prefix))
     return {"final_output": final, "tutor_message": final, "phase": "done"}

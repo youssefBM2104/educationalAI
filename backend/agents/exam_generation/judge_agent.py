@@ -8,7 +8,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gemma"]
+llm = MODELS["llama31"]
 
 
 # --- Output schema ---
