@@ -23,3 +23,12 @@ langchain-experimental
 json-repair
 langchain-neo4j
 qdrant-client
+ollama
+langchain-ollama
+transformers
+peft
+trl
+datasets
+accelerate
+rouge-score
+httpx

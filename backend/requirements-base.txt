@@ -4,3 +4,4 @@ qdrant-client
 sentence-transformers
 langchain-huggingface
 docling
+bitsandbytes
