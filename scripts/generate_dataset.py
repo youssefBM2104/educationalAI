@@ -77,8 +77,8 @@ OUTPUT_CSV  = os.path.join(DATA_DIR, "qa_dataset.csv")
 OUTPUT_JSON = os.path.join(DATA_DIR, "qa_dataset.json")
 
 # Chunking
-CHUNK_SIZE    = 800
-CHUNK_OVERLAP = 100
+CHUNK_SIZE    = 2000
+CHUNK_OVERLAP = 150
 
 # ---------------------------------------------------------------------------
 # LLM Provider — set DATASET_LLM_PROVIDER env var to switch
@@ -118,14 +118,14 @@ QA_PER_CHUNK = 1          # QA pairs per chunk — 1 is efficient for large docs
 # NIM free tier handles ~50 concurrent requests comfortably
 # Lower this if you see 429 rate-limit errors
 # ---------------------------------------------------------------------------
-MAX_CONCURRENT = 1
+MAX_CONCURRENT = 5
 
 # Resume support: skip chunks already in output CSV
 RESUME = True
 
 # Subject filter — limit to specific folders for testing
 # Set to [] to process all subjects
-SUBJECT_FILTER = ["Business"]  # ← change to [] for full run
+SUBJECT_FILTER = ["Microeconomics"]  # ← change to [] for full run
 
 # Supported MIME types -> file extensions
 SUPPORTED_MIME_TYPES = {
@@ -233,7 +233,7 @@ def _get_docling_converter() -> DocumentConverter:
     global _docling_converter
     if _docling_converter is None:
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_formula_enrichment = True
+        pipeline_options.do_formula_enrichment = False
         device_str = os.getenv('DOCLING_DEVICE', 'cpu')
         device = AcceleratorDevice.CUDA if device_str == 'cuda' else AcceleratorDevice.CPU
         pipeline_options.accelerator_options = AcceleratorOptions(
@@ -338,8 +338,9 @@ async def generate_qa_async(
             {"role": "user",   "content": f"Passage:\n\n{chunk}"},
         ],
         "temperature": 0.2,
-        "max_tokens":  800,
+        "max_tokens":  2000,
     }
+
 
     async with semaphore:
         for attempt in range(6):  # up to 6 attempts per chunk
@@ -388,6 +389,7 @@ async def generate_qa_async(
 
             except json.JSONDecodeError:
                 print(f"  [JSON error] {chunk_id}", flush=True)
+                print(f"  RAW OUTPUT: {raw[:300]!r}", flush=True)
                 return []
             except httpx.TimeoutException:
                 print(f"  [Timeout attempt {attempt+1}] {chunk_id}", flush=True)
