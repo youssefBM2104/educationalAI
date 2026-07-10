@@ -33,6 +33,7 @@ def gen_subq_node(state: TutoringState) -> dict:
         "current_level": level,
         "sub_question": sub_q,
         "expected_answer": expected,
+        "asked_questions": (state.get("asked_questions") or []) + [sub_q],
         "phase": "await_sub_answer",
         "tutor_message": message,
         "teach_note": None,
@@ -92,7 +93,7 @@ def route_after_climb(state: TutoringState) -> str:
     return "gen_bridge" if state.get("next_step") == "bridge" else "gen_subq"
 
 
-# --- Graph (turn-based: one student turn per invoke; state persists via checkpointer) ---
+# --- Tutoring Graph ---
 
 def get_tutoring_graph():
     global _app

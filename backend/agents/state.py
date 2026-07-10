@@ -87,6 +87,7 @@ class TutoringState(AgentState):
     current_level: NotRequired[int]          # k, during scaffold descent / climb back
     sub_question: NotRequired[str]
     expected_answer: NotRequired[str]
+    asked_questions: NotRequired[list]       # every sub-question already asked -> never repeat
     fail_streak: NotRequired[dict]           # {level: consecutive fails} -> safety cap = 3
     next_step: NotRequired[str]              # controller hint: "ask" | "bridge"
     teach_note: NotRequired[str]             # direct explanation to prepend (safety cap)
@@ -106,6 +107,4 @@ class TutoringState(AgentState):
     tutor_message: NotRequired[str]
 
 class MainState(ExamState, LectureState, LearningMaterialsState, TutoringState):
-    # Superset state for the top-level dispatcher graph: merges every pipeline's
-    # fields so subgraph outputs survive the state merge. All share AgentState.
     pass

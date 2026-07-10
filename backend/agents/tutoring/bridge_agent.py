@@ -7,7 +7,7 @@ from backend.agents.state import TutoringState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["gpt_oss"]
+llm = MODELS["gemma"]
 
 BRIDGE_PROMPT = """
 ## Role

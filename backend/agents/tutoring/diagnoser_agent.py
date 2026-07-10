@@ -9,7 +9,7 @@ from backend.agents.state import TutoringState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["nemotron"]
+llm = MODELS["gemma"]
 
 DIAG_PROMPT = """
 ## Role
@@ -17,19 +17,21 @@ You diagnose the student's attempt to derive the full answer to the original que
 Use the **context as ground truth**.
 
 ## Diagnosis
+- **no_attempt** — the student did not actually try (e.g. *"I don't know"*, *"no idea"*, blank,
+  or a reply with no reasoning about the question). There is no slip to point at.
 - **correct** — the derivation reaches the right conclusion.
-- **has_mistake** — otherwise; pinpoint the **specific error**
+- **has_mistake** — the student DID reason but went wrong; pinpoint the **specific error**
   (e.g. *"sign flipped in step 3"*, *"confused chain rule with product rule"*).
 
 ## Output
-- `status`: `correct` or `has_mistake`
-- `specific_error`: where the student slipped, or `null` if correct
+- `status`: `no_attempt`, `correct`, or `has_mistake`
+- `specific_error`: where the student slipped — only for `has_mistake`, otherwise `null`
 """.strip()
 
 
 class Diagnosis(BaseModel):
-    status: Literal["correct", "has_mistake"]
-    specific_error: Optional[str] = Field(default=None, description="Where the student slipped, or null if correct")
+    status: Literal["no_attempt", "correct", "has_mistake"]
+    specific_error: Optional[str] = Field(default=None, description="Where the student slipped; null unless has_mistake")
 
 
 def _context(state: TutoringState) -> str:
