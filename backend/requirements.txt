@@ -25,3 +25,12 @@ langchain-neo4j
 langgraph
 qdrant-client
 reportlab
+ollama
+langchain-ollama
+transformers
+peft
+trl
+datasets
+accelerate
+rouge-score
+httpx

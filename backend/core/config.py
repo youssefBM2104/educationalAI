@@ -30,6 +30,24 @@ class Settings(BaseSettings):
     # GPU device selection
     embedding_device: str = "cpu"
     docling_device: str = "cpu"
+    # --- Base model (downloaded from HuggingFace the first time) -----------------
+    small_ai_base_model: str   = "Qwen/Qwen3-1.7B"
+    
+    # --- Where the fine-tuned model is saved after training/train.py -------------
+    small_ai_output_dir: str  = "./trained_model/edu-qwen-v1"
+    
+    # --- Your existing Q&A dataset (already have this, just point to it) ---------
+    small_ai_dataset_path: str = "../data/qa_dataset.json"
+    
+    small_ai_lora_r:        int   = 16
+    small_ai_lora_alpha:    int   = 32
+    small_ai_lora_dropout:  float = 0.05
+    small_ai_epochs:        int   = 3
+    small_ai_batch_size:    int   = 2
+    small_ai_learning_rate: float = 2e-4
+    small_ai_max_seq_length: int  = 512
+    small_ai_min_interactions: int = 10
+    small_ai_user_data_dir: str   = "./user_data"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
