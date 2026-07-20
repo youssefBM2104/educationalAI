@@ -5,9 +5,12 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LearningMaterialsState
+#from backend.local_ai.local_model import MODEL
+
 
 logger = logging.getLogger(__name__)
 
+#llm = MODEL["small_ai"]
 llm = MODELS["llama31"]
 
 

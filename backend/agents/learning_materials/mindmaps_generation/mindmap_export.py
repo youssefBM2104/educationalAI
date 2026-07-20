@@ -25,7 +25,7 @@ def _node_to_mermaid(node: dict, depth: int = 0) -> list[str]:
     Recursively convert a MindmapNode dict into Mermaid mindmap lines.
     Mermaid mindmap uses indentation to express hierarchy.
     """
-    indent = "  " * (depth + 1)
+    indent = "  " * (depth)
     label = node["label"]
 
     # Root node uses double parentheses, others use plain text
@@ -42,9 +42,19 @@ def _node_to_mermaid(node: dict, depth: int = 0) -> list[str]:
 
 def _build_mermaid(tree: dict, topic: str) -> str:
     root = tree["root"]
-    lines = ["---", f'title: "{topic}"', "---", "mindmap"]
-    lines.extend(_node_to_mermaid(root, depth=0))
-    return "\n".join(lines)
+
+    body = ["mindmap"]
+    body.extend(_node_to_mermaid(root))
+
+    return "\n".join([
+        "---",
+        f'title: "{topic}"',
+        "---",
+        "",
+        "```mermaid",
+        *body,
+        "```",
+    ])
 
 
 # ---------------------------------------------------------------------------

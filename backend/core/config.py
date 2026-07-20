@@ -1,4 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+
+_BASE_DIR = Path(__file__).resolve().parent.parent  # → backend/
+
 
 class Settings(BaseSettings):
     # PostgreSQL
@@ -34,11 +38,11 @@ class Settings(BaseSettings):
     small_ai_base_model: str   = "Qwen/Qwen3-1.7B"
     
     # --- Where the fine-tuned model is saved after training/train.py -------------
-    small_ai_output_dir: str  = "./trained_model/edu-qwen-v1"
-    
-    # --- Your existing Q&A dataset (already have this, just point to it) ---------
-    small_ai_dataset_path: str = "../data/qa_dataset.json"
-    
+
+    small_ai_output_dir: str = str(_BASE_DIR / "trained_model" / "edu-qwen-v1")
+    # --- Existing Q&A dataset (already have this, just point to it) ---------
+    small_ai_dataset_path: str = str(_BASE_DIR / "data" / "qa_dataset.json")
+
     small_ai_lora_r:        int   = 16
     small_ai_lora_alpha:    int   = 32
     small_ai_lora_dropout:  float = 0.05
@@ -47,7 +51,8 @@ class Settings(BaseSettings):
     small_ai_learning_rate: float = 2e-4
     small_ai_max_seq_length: int  = 512
     small_ai_min_interactions: int = 10
-    small_ai_user_data_dir: str   = "./user_data"
+    small_ai_user_data_dir: str = str(_BASE_DIR / "user_data")
+
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
