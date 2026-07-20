@@ -20,7 +20,7 @@ from backend.agents.exam_generation.exam_graph import get_exam_graph
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 FIXTURE = Path(__file__).parent / "fixtures" / "rag_passive_waiting.json"
-DEFAULT_QUERY = "Create 5 multiple-choice questions about thread synchronization"
+DEFAULT_QUERY = "Create 3 multiple-choice questions about thread synchronization"
 
 
 def load_state(query: str) -> dict:

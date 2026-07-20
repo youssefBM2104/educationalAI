@@ -23,15 +23,23 @@ PATH_HARD_LIMIT = 8
 
 # --- Output schema ---
 
+PATH_RULE = (
+    "Ordered concept names, copied verbatim from the knowledge graph. Relation types are NOT "
+    "concepts: given `A --[PART_OF]--> B --[EXTENDS]--> C`, the path is exactly ['A', 'B', 'C']. "
+    "Each consecutive pair must be joined by a relation that appears in the graph, and no concept "
+    "may appear more than once."
+)
+
+
 class Distractor(BaseModel):
     choice_key: Literal["A", "B", "C", "D"]
     concept_path: list[str] = Field(
-        description="Near-miss path backing this wrong option, e.g. [a, b, c, e]"
+        description=f"Near-miss path backing this wrong option. {PATH_RULE}"
     )
 
 
 class MCQQuestion(BaseModel):
-    kg_path: list[str] = Field(description="Ordered concept ids on the correct path, e.g. [a, b, c, d]")
+    kg_path: list[str] = Field(description=f"The correct path. {PATH_RULE}")
     question: str
     choices: dict[str, str] = Field(description='Exactly four options keyed "A","B","C","D"')
     correct_option: Literal["A", "B", "C", "D"]
@@ -42,7 +50,7 @@ class MCQQuestion(BaseModel):
 
 
 class EssayQuestion(BaseModel):
-    kg_path: list[str] = Field(description="Ordered concept ids on the correct path")
+    kg_path: list[str] = Field(description=f"The correct path. {PATH_RULE}")
     question: str
     model_answer: str = Field(description="Generator's ground-truth answer")
     marking_scheme: str = Field(
@@ -161,9 +169,22 @@ You are the **Generator** in a multi-agent exam-generation pipeline.
 
 # Task
 
-Pick a **connected path of {min_len}–{max_len} concepts (chunks)** through the knowledge graph below
+Pick a **connected path of {min_len}–{max_len} concepts** through the knowledge graph below
 (difficulty: **{difficulty}**; never exceed {PATH_HARD_LIMIT} concepts). The question MUST require
 traversing the whole path — it cannot be answerable by a shortcut.
+
+## Path format
+
+The graph is written as `from --[TYPE]--> to`. A path lists **only the concepts**, never the
+relation types:
+
+> Graph: `mutex --[PART_OF]--> passive waiting solutions --[EXTENDS]--> Semaphores`
+> Path: `["mutex", "passive waiting solutions", "Semaphores"]`  ← 3 concepts, 2 relations
+
+- Copy concept names **verbatim** from the graph.
+- `PART_OF`, `DEFINES`, `EXTENDS`, ... are **relations, not concepts** — never put them in the path.
+- Each consecutive pair must be joined by a relation that actually appears in the graph.
+- `kg_path` must contain **exactly {min_len}–{max_len} entries** — this is what sets the difficulty.
 
 ## Question type
 
