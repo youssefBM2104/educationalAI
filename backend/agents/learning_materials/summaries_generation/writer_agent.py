@@ -6,10 +6,12 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LearningMaterialsState
+from backend.local_ai.local_model import MODEL
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["llama31"]
+llm = MODEL["small_ai"]
+#llm = MODELS["llama31"]
 
 # Target word counts per detail level — communicated to the LLM via the prompt
 TARGET_WORDS: dict[str, str] = {
@@ -109,7 +111,13 @@ Write a complete summary of the topic at the requested detail level.
 def writer_agent(state: LearningMaterialsState) -> dict:
     detail_level = state.get("detail_level", "medium")
 
-    structured_llm = llm.with_structured_output(Summary)
+    # method="json_schema" works around a langchain-huggingface bug: Pydantic
+    # schemas raise NotImplementedError under the default method="function_calling"
+    # (open upstream issue: langchain-ai/langchain#32197). Only needed for
+    # MODEL["small_ai"] (ChatHuggingFace) — if llm is swapped back to llama31
+    # (ChatNVIDIA, native tool-calling), reconsider whether this method is still
+    # the best choice.
+    structured_llm = llm.with_structured_output(Summary, method="json_schema")
 
     result: Summary = structured_llm.invoke([
         SystemMessage(content=_build_prompt(state)),

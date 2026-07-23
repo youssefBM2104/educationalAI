@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
-from local_ai.tasks.qa import answer_question
-from local_ai.tasks.conversation_summary import summarize_conversation
+from backend.local_ai.tasks.qa import answer_question
+from backend.local_ai.tasks.conversation_summary import summarize_conversation
 
 logger = logging.getLogger(__name__)
 

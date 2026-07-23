@@ -239,6 +239,10 @@ docker-compose.gpu.yml
 data/
 *.csv
 *.json
+# ...but NOT the model config/tokenizer files train.py writes into trained_model/
+# (adapter_config.json, tokenizer.json, tokenizer_config.json, etc.) — these are
+# required to actually load the adapter, not "generated data" to discard.
+!backend/trained_model/**/*.json
 
 # Python
 __pycache__/

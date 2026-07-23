@@ -1,4 +1,4 @@
-from local_ai.model_manager import model_manager
+from backend.local_ai.model_manager import model_manager
 from typing import List
 
 SYSTEM_PROMPT = """You are an educational assistant.

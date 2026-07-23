@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 
-from local_ai.model_manager import model_manager
-from local_ai.tasks.qa import answer_question
-from local_ai.tasks.conversation_summary import summarize_conversation
-from local_ai.tasks.learning_materials import get_mindmap, get_summary
+from backend.local_ai.model_manager import model_manager
+from backend.local_ai.tasks.qa import answer_question
+from backend.local_ai.tasks.conversation_summary import summarize_conversation
+from backend.local_ai.tasks.learning_materials import get_mindmap, get_summary
 
 router = APIRouter(prefix="/local-ai", tags=["Local AI"])
 

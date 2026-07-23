@@ -14,7 +14,7 @@ import logging
 import requests
 from typing import Optional
 from langchain_core.messages import SystemMessage, HumanMessage
-from local_ai.local_model import MODEL
+from backend.local_ai.local_model import MODEL
 
 logger = logging.getLogger(__name__)
 

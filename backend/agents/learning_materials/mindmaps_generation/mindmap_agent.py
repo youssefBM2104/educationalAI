@@ -5,13 +5,13 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LearningMaterialsState
-#from backend.local_ai.local_model import MODEL
+from backend.local_ai.local_model import MODEL
 
 
 logger = logging.getLogger(__name__)
 
-#llm = MODEL["small_ai"]
-llm = MODELS["llama31"]
+llm = MODEL["small_ai"]
+#llm = MODELS["llama31"]
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +123,13 @@ _Ground every node description in these chunks._
 # ---------------------------------------------------------------------------
 
 def mindmap_agent(state: LearningMaterialsState) -> dict:
-    structured_llm = llm.with_structured_output(MindmapTree)
+    # method="json_schema" works around a langchain-huggingface bug: Pydantic
+    # schemas raise NotImplementedError under the default method="function_calling"
+    # (open upstream issue: langchain-ai/langchain#32197). Only needed for
+    # MODEL["small_ai"] (ChatHuggingFace) — if llm is swapped back to llama31
+    # (ChatNVIDIA, native tool-calling), reconsider whether this method is still
+    # the best choice.
+    structured_llm = llm.with_structured_output(MindmapTree, method="json_schema")
 
     result: MindmapTree = structured_llm.invoke([
         SystemMessage(content=_build_prompt(state)),

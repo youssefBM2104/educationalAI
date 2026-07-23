@@ -1,4 +1,4 @@
-from local_ai.model_manager import model_manager
+from backend.local_ai.model_manager import model_manager
 
 SYSTEM_PROMPT = """You are a helpful educational assistant.
 Answer the student's question clearly and concisely based only on the context provided.

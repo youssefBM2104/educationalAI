@@ -6,10 +6,12 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LearningMaterialsState
+from backend.local_ai.local_model import MODEL
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["llama31"]
+llm = MODEL["small_ai"]
+#llm = MODELS["llama31"]
 
 # How many ideas to extract per concept depending on the requested detail level
 IDEA_LIMITS: dict[str, int] = {
@@ -124,7 +126,13 @@ def extractor_agent(state: LearningMaterialsState) -> dict:
     detail_level = state.get("detail_level", "medium")
     idea_limit   = IDEA_LIMITS.get(detail_level, IDEA_LIMITS["medium"])
 
-    structured_llm = llm.with_structured_output(ExtractedIdeas)
+    # method="json_schema" works around a langchain-huggingface bug: Pydantic
+    # schemas raise NotImplementedError under the default method="function_calling"
+    # (open upstream issue: langchain-ai/langchain#32197). Only needed for
+    # MODEL["small_ai"] (ChatHuggingFace) — if llm is swapped back to llama31
+    # (ChatNVIDIA, native tool-calling), reconsider whether this method is still
+    # the best choice.
+    structured_llm = llm.with_structured_output(ExtractedIdeas, method="json_schema")
 
     result: ExtractedIdeas = structured_llm.invoke([
         SystemMessage(content=_build_prompt(state, idea_limit)),
