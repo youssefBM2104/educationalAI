@@ -8,7 +8,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["llama31"]
+llm = MODELS["gpt-5.1"]
 
 
 # --- Output schema ---
@@ -64,6 +64,9 @@ def _build_prompt(state: ExamState, question_type: str) -> str:
         "- **Distractor quality**: are the wrong options plausible but clearly incorrect per the KG?\n"
         if question_type == "mcq" else ""
     )
+    # Static-first for prefix caching: Role, Criteria and the full knowledge graph are identical
+    # for every question judged in one run, so they lead as a cacheable prefix. The per-question
+    # parts (the question itself, its path, the real chunks, the solver's attempt) go at the end.
     return f"""# Role
 
 You are the **Judge** in a multi-agent exam-generation pipeline, with FULL knowledge-graph access.
@@ -74,8 +77,12 @@ correct answer as the reference.
 
 - **Relevance**: are the question + correct answer relevant and on-topic for the source chunks (no invented facts)?
 - **Answer grounding**: is the correct answer derivable from the source chunks (directly or via multi-hop)?
-{distractor_criterion}- **Path coverage**: does the SOLVER's reasoning traverse the reasoning path below in order (not a shortcut)?
+{distractor_criterion}- **Path coverage**: does the SOLVER's reasoning traverse the reasoning path in order (not a shortcut)?
 - Also report **solver_correct**: does the solver's answer match the correct answer?
+
+# Knowledge graph (full)
+
+{_format_kg(state.get("kg_context"))}
 
 # Question
 
@@ -88,10 +95,6 @@ correct answer as the reference.
 # Source chunks (real)
 
 {_format_chunks(state.get("chunk_bundle"))}
-
-# Knowledge graph (full)
-
-{_format_kg(state.get("kg_context"))}
 
 # Solver output (simulated student)
 
@@ -120,7 +123,7 @@ def _decide(question_type: str, ev, solver_correct: bool) -> tuple[bool, str]:
 def judge_agent(state: ExamState) -> dict:
     question_type = state["question_type"]
     schema = MCQJudgement if question_type == "mcq" else EssayJudgement
-    structured_llm = llm.with_structured_output(schema)
+    structured_llm = llm.with_structured_output(schema, method="function_calling")
 
     ev = structured_llm.invoke([SystemMessage(content=_build_prompt(state, question_type))])
 

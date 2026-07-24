@@ -16,10 +16,12 @@ class KGBuilder:
     def __init__(self, llm, neo4j_uri, neo4j_user, neo4j_password):
         self.transformer = LLMGraphTransformer(
             llm=llm,
-            allowed_nodes=["Concept", "Formula", "Theorem", "Example", "Method", "Definition"],
+            allowed_nodes=["Concept", "Formula", "Theorem", "Example", "Method"],
             allowed_relationships=["PREREQUISITE", "EXTENDS", "DEFINES", "APPLIES_TO", "ILLUSTRATES", "PART_OF"],
-            ignore_tool_usage=True,  # ChatNVIDIA doesn't support include_raw=True in structured output
-                                     # so we fall back to prompt-based extraction instead
+            node_properties=["definition", "aliases", "status"],
+            # node_properties require native function calling; keep this False (an OpenAI model is
+            # used — the NVIDIA prompt-based path raises ValueError when properties are requested).
+            ignore_tool_usage=False,
         )
         self.graph = Neo4jGraph(
             url=neo4j_uri,

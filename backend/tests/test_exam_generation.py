@@ -16,11 +16,12 @@ import logging
 from pathlib import Path
 
 from backend.agents.exam_generation.exam_graph import get_exam_graph
+from backend.eval.usage import UsageTracker
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 FIXTURE = Path(__file__).parent / "fixtures" / "rag_passive_waiting.json"
-DEFAULT_QUERY = "Create 3 multiple-choice questions about thread synchronization"
+DEFAULT_QUERY = "Create 3 multiple choice questions about thread synchronization"
 
 
 def load_state(query: str) -> dict:
@@ -41,7 +42,8 @@ def main():
 
     print(f"\n=== QUERY ===\n{query}\n")
     app = get_exam_graph()
-    result = app.invoke(state)
+    with UsageTracker() as tracker:
+        result = app.invoke(state, config={"callbacks": [tracker]})
 
     exam_set = result.get("exam_set") or []
     print(f"\n=== EXAM SET ({len(exam_set)} questions, "
@@ -60,6 +62,8 @@ def main():
             print(f"  model answer: {q.get('model_answer')}")
             print(f"  marking scheme: {q.get('marking_scheme')}")
         print(f"  kg_path: {q.get('kg_path')}\n")
+
+    tracker.report()
 
 
 if __name__ == "__main__":

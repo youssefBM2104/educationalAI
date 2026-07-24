@@ -11,18 +11,29 @@ from backend.eval.judge import GEval
 
 # Observed failure: "What is the sequence of concepts that leads to X?" with options that are
 # literal KG paths (A -> B -> C). A student never sees the graph, so the question is unusable.
+# Refinement: penalise the *pipeline's* concept-graph scaffolding leaking to the surface — NOT
+# ordinary subject terms that merely contain the word "graph"/"path" (e.g. a "waiting-for-
+# resources graph" is real OS content and must pass).
 question_naturalness = GEval(
     name="Question Naturalness",
     criteria=(
         "The question must read like a real exam question a student answers from subject "
-        "knowledge. It must NOT expose the internal knowledge-graph structure, and must not "
-        "be answerable only by inspecting a concept graph the student cannot see."
+        "knowledge. It must NOT expose the pipeline's internal concept-graph SCAFFOLDING — "
+        "options that are arrow chains of concept names, or wording that tells the student to "
+        "follow a 'concept path' / 'sequence of concepts' they were never shown. "
+        "IMPORTANT: subject-matter terms that merely contain the words 'graph', 'path', 'node' "
+        "or 'tree' (e.g. 'waiting-for-resources graph', 'call graph', 'shortest-path algorithm') "
+        "are legitimate course content — do NOT penalise them."
     ),
     evaluation_steps=[
-        "Does the question mention a 'path', a 'sequence of concepts', or the knowledge graph itself?",
-        "Are the answer options literal chains of concepts (A -> B -> C) rather than real answers?",
-        "Could a student who has studied the material, but has never seen a concept graph, answer it?",
-        "Penalise heavily any question that is really a graph-traversal puzzle rather than a subject question.",
+        "Are any answer options literal arrow chains of concept names (e.g. 'A -> B -> C') "
+        "instead of real, self-contained statements? If so, penalise heavily.",
+        "Does the wording refer to the SCAFFOLDING itself — 'the concept path', 'the sequence of "
+        "concepts', 'traverse the graph of concepts' — i.e. a structure the student never saw? Penalise.",
+        "Distinguish that from legitimate SUBJECT terminology: a 'waiting-for-resources graph' or a "
+        "'shortest-path problem' is real course content and must NOT be penalised.",
+        "Could a student who studied the material, but never saw the pipeline's concept graph, read "
+        "and answer this question? If yes, it is natural.",
     ],
     fields=["query", "question", "options"],   # deliberately NOT shown the kg_path / KG
 )

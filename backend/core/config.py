@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
     # NVIDIA NIM
     nim_api_key: str = ""
+    # OpenAI — GPT-5 family (per-agent model plan wired in core/models.py)
+    openai_api_key: str = ""
     # Google Gemini — held-out judge for offline evaluation (different provider than the
     # pipeline, so the judge never grades output from its own model family)
     google_api_key: str = ""

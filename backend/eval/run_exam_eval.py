@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(mes
 
 FIXTURE = Path("backend/tests/fixtures/rag_passive_waiting.json")
 SAVE_PATH = Path("outputs/eval/exam_latest.json")
-DEFAULT_QUERY = "Create 3 essay questions about thread synchronization"
+DEFAULT_QUERY = "Create 3 multiple choice questions about thread synchronization"
 
 
 # --- Generation (only when we don't already have an exam to score) ---

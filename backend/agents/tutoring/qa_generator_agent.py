@@ -45,27 +45,30 @@ def _asked_block(state: TutoringState) -> str:
 
 def generate_subquestion(state: TutoringState, level: int) -> tuple[str, str]:
     level = max(1, min(level, 6))
+    # Prompt is ordered static-first for prefix caching: the Role, Context and Original question
+    # are constant across every turn of a session, so they form a long cacheable prefix. The
+    # per-turn dynamic parts (target level, list of already-asked questions) go at the end.
     prompt = f"""## Role
 You generate a scaffolding sub-question for **Socratic tutoring**.
 
-## Task
-- Target Bloom level: **{level} ({BLOOM_NAMES.get(level)})**.
-- {BLOOM_GUIDANCE[level]}
-- The sub-question must be **answerable from the context**.
-- It should lead the student one step toward the original question.
-- Also provide the **expected correct answer**.
-
-## Already asked — do NOT repeat or reword these
-The student has already seen the questions below. Ask about a **different angle or sub-idea**;
-never restate one of them.
-
-{_asked_block(state)}
+## Context
+{_context(state)}
 
 ## Original question
 {state['query']}
 
-## Context
-{_context(state)}
+## Task
+- Target Bloom level: **{level} ({BLOOM_NAMES.get(level)})**.
+- {BLOOM_GUIDANCE[level]}
+- The sub-question must be **answerable from the context above**.
+- It should lead the student one step toward the original question.
+- Also provide the **expected correct answer**.
+
+## Already asked — do NOT repeat or reword these
+The student has already seen the questions listed here. Ask about a **different angle or sub-idea**;
+never restate one of them.
+
+{_asked_block(state)}
 """
     res = llm.with_structured_output(SubQA).invoke([
         SystemMessage(content=prompt),
