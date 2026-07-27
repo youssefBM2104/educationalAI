@@ -38,7 +38,7 @@ MODELS = {
     
     "gpt-5-nano": _openai("gpt-5-nano", reasoning_effort="minimal"),  # intake/mindmap — trivial
     "gpt-5-mini": _openai("gpt-5-mini", reasoning_effort="minimal"),
-    "gpt-5":      _openai("gpt-5", reasoning_effort="low"),           # gen/solver — some path reasoning
+    "gpt-5":      _openai("gpt-5", reasoning_effort="medium"),           # gen/solver — some path reasoning
     "gpt-5.1":    _openai("gpt-5.1", reasoning_effort="low"),         # judge
 
     # Non-reasoning model with a tunable temperature — alternative for the generator, where natural
