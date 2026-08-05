@@ -22,8 +22,11 @@ def get_minio_client():
             client.make_bucket(settings.minio_bucket_originals)
         if not client.bucket_exists(settings.minio_bucket_markdown):
             client.make_bucket(settings.minio_bucket_markdown)
+        if not client.bucket_exists(settings.minio_bucket_images):
+            client.make_bucket(settings.minio_bucket_images)
         _client = client
         return _client
+
 
 def upload_file(local_path,object_key,bucket):
     client = get_minio_client()
@@ -32,7 +35,19 @@ def upload_file(local_path,object_key,bucket):
 def download_file(local_path,object_key,bucket):
     client = get_minio_client()
     client.fget_object(bucket, object_key, local_path)
+def upload_image_bytes(pil_image, object_key: str, bucket: str):
+    from io import BytesIO
+    client = get_minio_client()
+    buffer = BytesIO()
+    pil_image.save(buffer, format="PNG")
+    buffer.seek(0)
+    size = buffer.getbuffer().nbytes
+    client.put_object(bucket, object_key, buffer, length=size, content_type="image/png")
 
+def get_presigned_image_url(object_key: str, bucket: str, expires_seconds: int = 3600):
+    from datetime import timedelta
+    client = get_minio_client()
+    return client.presigned_get_object(bucket, object_key, expires=timedelta(seconds=expires_seconds))
 
 def sha256_of_file(path):
     h = hashlib.sha256()

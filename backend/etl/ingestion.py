@@ -114,41 +114,55 @@ def _ollama_reachable() -> bool:
         return False
 
 
-def _parse_pdf_docling(file_path: str) -> str:
+def _parse_pdf_docling(file_path: str, document_id: str) -> tuple[str, list[dict]]:
     converter = _get_docling_converter()
     result = converter.convert(file_path)
     markdown = result.document.export_to_markdown()
-
-    # Remove hallucinated repetition loops from formula enrichment
     markdown = _sanitize_formula_output(markdown)
 
+    image_records: list[dict] = []
+
     if not settings.vlm_enrichment_enabled:
-        return markdown
+        return markdown, image_records
 
     picture_items = [
-        item
-        for item, _level in result.document.iterate_items()
+        item for item, _level in result.document.iterate_items()
         if isinstance(item, PictureItem)
     ]
-
     if not picture_items:
-        return markdown
+        return markdown, image_records
 
     if not _ollama_reachable():
         logger.warning("Ollama unreachable — skipping VLM image enrichment for %s", file_path)
-        return markdown
+        return markdown, image_records
 
-    for item in picture_items:
+    for idx, item in enumerate(picture_items):
         if "<!-- image -->" not in markdown:
             break
+
         if item.image and item.image.pil_image:
+            image_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{document_id}_img_{idx:04d}"))
             description = _describe_image(item.image.pil_image)
+
+            bbox = item.prov[0].bbox if item.prov else None
+            page_number = item.prov[0].page_no if item.prov else None
+
+            image_records.append({
+                "image_id": image_id,
+                "document_id": document_id,
+                "pil_image": item.image.pil_image,
+                "vlm_description": description,
+                "page_number": page_number,
+                "bbox": bbox,
+                "chunk_id": None,  # resolved after chunking
+            })
+            replacement = f"{description}<!-- IMG:{image_id} -->"
         else:
-            description = "<!-- image-no-data -->"
-        markdown = markdown.replace("<!-- image -->", description, 1)
+            replacement = "<!-- image-no-data -->"
 
-    return markdown
+        markdown = markdown.replace("<!-- image -->", replacement, 1)
 
+    return markdown, image_records
 
 def clean(text: str) -> str:
     # 1. Normalize Windows line endings
@@ -165,25 +179,31 @@ def clean(text: str) -> str:
 
 
 
+_IMG_MARKER = re.compile(r'<!-- IMG:([0-9a-f\-]+) -->')
+
 def chunk(text: str, document_id: str, course_id: str) -> list[dict]:
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1600,
-        chunk_overlap=200,
+        chunk_size=1600, chunk_overlap=200,
         separators=["\n\n", "\n", ". ", " "],
     )
     splits = splitter.split_text(text)
-    return [
-        {
+    chunks = []
+    for i, split in enumerate(splits):
+        image_ids = _IMG_MARKER.findall(split)
+        clean_text = _IMG_MARKER.sub('', split).strip()
+        chunks.append({
             "chunk_id": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{document_id}_chunk_{i:04d}")),
             "document_id": document_id,
             "course_id": course_id,
             "chunk_index": i,
-            "text": split,
+            "text": clean_text,
             "covers_concepts": [],
-        }
-        for i, split in enumerate(splits)
-    ]
-# Semantic + Hierarchical chunking 
+            "image_ids": image_ids,
+        })
+    return chunks
+
+# Semantic + Hierarchical chunking
+
 _embeddings = None
 
 
@@ -204,15 +224,12 @@ def semantic_hierarchical_chunk(text: str, document_id: str, course_id: str) -> 
       2. SEMANTIC — within each section, split further at points where the topic
          shifts (measured by embedding similarity between adjacent sentences).
     """
-
     md_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
         strip_headers=False,
     )
     sections = md_splitter.split_text(text)
-
     semantic_splitter = SemanticChunker(_get_embeddings())
-
     chunks = []
     idx = 0
     for section in sections:
@@ -220,18 +237,19 @@ def semantic_hierarchical_chunk(text: str, document_id: str, course_id: str) -> 
         if not content:
             continue
         for piece in semantic_splitter.split_text(content):
+            image_ids = _IMG_MARKER.findall(piece)
+            clean_piece = _IMG_MARKER.sub('', piece).strip()
             chunks.append({
                 "chunk_id": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{document_id}_chunk_{idx:04d}")),
                 "document_id": document_id,
                 "course_id": course_id,
                 "chunk_index": idx,
-                "text": piece,
+                "text": clean_piece,
                 "covers_concepts": [],
+                "image_ids": image_ids,
             })
             idx += 1
     return chunks
-
-
 
 def parse_and_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
     """Parse -> clean -> save markdown -> RECURSIVE chunk."""
@@ -247,20 +265,25 @@ def parse_and_chunk(file_path: str, document_id: str, course_id: str) -> list[di
     return chunks
 
 
-def parse_and_semantic_hierarchical_chunk(file_path: str, document_id: str, course_id: str) -> list[dict]:
-    """Parse -> clean -> save markdown -> SEMANTIC + HIERARCHICAL chunk.
+def parse_and_semantic_hierarchical_chunk(file_path: str, document_id: str, course_id: str) -> tuple[list[dict], list[dict]]:
+    suffix = Path(file_path).suffix.lower()
+    if suffix == ".pdf":
+        raw_text, image_records = _parse_pdf_docling(file_path, document_id)
+    else:
+        raw_text = _markitdown.convert(file_path).text_content
+        image_records = []
 
-    Sibling of parse_and_chunk(): same prepare steps, different chunking strategy.
-    Use this when you want richer chunks with header metadata + semantic boundaries
-    (slower; embeds every sentence via sentence-transformers).
-    """
-    raw_text = parse(file_path)
     clean_text = clean(raw_text)
     Path(file_path + ".md").write_text(clean_text, encoding="utf-8")
     chunks = semantic_hierarchical_chunk(clean_text, document_id, course_id)
     if not chunks:
-        raise ValueError(
-            f"Document produced no chunks after parsing — "
-            f"file may be empty or unreadable: {file_path}"
-        )
-    return chunks
+        raise ValueError(f"Document produced no chunks — {file_path}")
+
+    id_to_chunk = {}
+    for c in chunks:
+        for img_id in c["image_ids"]:
+            id_to_chunk[img_id] = c["chunk_id"]
+    for rec in image_records:
+        rec["chunk_id"] = id_to_chunk.get(rec["image_id"])
+
+    return chunks, image_records

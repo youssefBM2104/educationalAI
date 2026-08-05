@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     minio_root_password: str = ""
     minio_bucket_originals: str = "originals"
     minio_bucket_markdown: str = "markdown"
+    minio_bucket_images: str = "images"
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "edu_collection"
@@ -42,9 +43,9 @@ class Settings(BaseSettings):
     langsmith_project: str = "educational-ai"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
     # Ollama / VLM
-    ollama_host: str = "http://ollama:11434"
+    ollama_host: str = "http://localhost:11434"
     vlm_model: str = "llava:7b"
-    vlm_enrichment_enabled: bool = False
+    vlm_enrichment_enabled: bool = True
     # GPU device selection
     embedding_device: str = "cpu"
     docling_device: str = "cpu"

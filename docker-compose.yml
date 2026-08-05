@@ -90,6 +90,10 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - NIM_API_KEY=${NIM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TORCHDYNAMO_DISABLE=1
+      - OLLAMA_HOST=http://host.docker.internal:11434    # new
+    extra_hosts:
+      - "host.docker.internal:host-gateway"               # new — required on Linux
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,17 +101,19 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app/backend
+      - hf_cache:/app/.cache/huggingface
 
   # ─── Ollama Local Model ───────────────────────────────────────────────────
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
+  #ollama:
+    #image: ollama/ollama
+    #ports:
+      #- "11434:11434"
+    #volumes:
+      #- ollama_data:/root/.ollama
 volumes:
   postgres_data:
   minio_data:
   qdrant_data:
   neo4j_data:
-  ollama_data:
+  hf_cache:
+  #ollama_data:

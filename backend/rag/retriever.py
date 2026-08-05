@@ -151,6 +151,7 @@ def _scroll_by_concepts(
 
     return [
         {
+            "chunk_id": str(p.id),
             "score": None,  # no relevance score — selected via KG traversal
             "text": p.payload.get("text"),
             "document_id": p.payload.get("document_id"),
@@ -255,6 +256,7 @@ def retrieve(
 
     return [
         {
+            "chunk_id": str(point.id),
             "score": point.score,
             "text": point.payload.get("text"),
             "document_id": point.payload.get("document_id"),
