@@ -1,0 +1,69 @@
+# docker-compose.ai-server.yml
+#
+# Separate deployable stack for the AI-Server: the FastAPI app that exposes
+# exam/slides/tutoring endpoints, plus its own Celery worker.
+#
+# This is intentionally NOT merged into docker-compose.yml (which only holds
+# the shared databases + the ingestion worker). The AI-Server is application
+# code that changes often and gets redeployed/rescaled independently from the
+# databases, so it lives in its own compose project.
+#
+# Requires the shared database stack to already be running:
+#   docker compose -f docker-compose.yml up -d
+# (that command creates the "edu_network" this file attaches to below)
+#
+# Then bring this stack up separately:
+#   docker compose -f docker-compose.ai-server.yml up -d --build
+
+services:
+
+  # ─── AI-Server API (FastAPI app: exam / slides / tutoring endpoints) ──────
+  ai_server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edu_ai_server
+    command: uvicorn backend.ai_server.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    environment:
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - QDRANT_URL=http://qdrant:6333
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NIM_API_KEY=${NIM_API_KEY}
+    volumes:
+      - ./backend:/app/backend
+
+  # ─── AI-Server Celery worker (exam / slides jobs, separate queue) ─────────
+  ai_server_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edu_ai_server_worker
+    command: celery -A backend.ai_server.ai_server_tasks worker --loglevel=info --pool=solo -Q ai_server
+    environment:
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - QDRANT_URL=http://qdrant:6333
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NIM_API_KEY=${NIM_API_KEY}
+    volumes:
+      - ./backend:/app/backend
+
+# ─── Shared network ──────────────────────────────────────────────────────────
+# Joins the network created by docker-compose.yml instead of creating its own
+# isolated one — this is what lets `ai_server` resolve "postgres", "redis",
+# "qdrant", "neo4j" by hostname even though it's a separate compose project.
+networks:
+  default:
+    name: edu_network
+    external: true

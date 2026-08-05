@@ -25,6 +25,7 @@ langchain-neo4j
 langgraph
 qdrant-client
 reportlab
+python-pptx
 ollama
 langchain-ollama
 transformers

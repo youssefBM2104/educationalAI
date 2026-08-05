@@ -104,9 +104,20 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+
 volumes:
   postgres_data:
   minio_data:
   qdrant_data:
   neo4j_data:
   ollama_data:
+
+# ─── Shared network ──────────────────────────────────────────────────────────
+# Fixed name (instead of the Compose-project-scoped default) so other compose
+# files (docker-compose.ai-server.yml, and later the frontend's own compose
+# file) can join it as an "external" network and still reach these services
+# by hostname (postgres, redis, qdrant, neo4j...), even though they are
+# started from a completely separate `docker compose` project.
+networks:
+  default:
+    name: edu_network
