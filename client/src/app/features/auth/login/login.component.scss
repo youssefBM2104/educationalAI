@@ -1,0 +1,108 @@
+@use 'tokens' as *;
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// ── Outer container ───────────────────────────────────────────────────────────
+
+.login-screen {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Brand wordmark ────────────────────────────────────────────────────────────
+// Absolutely positioned so it floats above the split without being "in" either half.
+
+.login-screen__brand {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: $space-32;
+  pointer-events: none;
+  user-select: none;
+}
+
+.brand__name {
+  font-family: $font-serif;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.brand__sub {
+  font-family: $font-sans;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  margin-top: $space-4;
+}
+
+// ── The split ─────────────────────────────────────────────────────────────────
+
+.login-screen__split {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+// ── Divider rule ──────────────────────────────────────────────────────────────
+
+.split-rule {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+
+  .login-screen--lecturer-active &,
+  .login-screen--student-active & {
+    opacity: 0;
+  }
+}
+
+// ── Mobile ────────────────────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .login-screen__split {
+    flex-direction: column;
+  }
+
+  .login-screen__brand {
+    position: relative;
+    left: auto;
+    transform: none;
+    padding: $space-24 $space-24 $space-16;
+    background: $navy-deep;
+    align-items: flex-start;
+
+    // collapse when a role is active so the form gets more room
+    .login-screen--lecturer-active &,
+    .login-screen--student-active & {
+      display: none;
+    }
+  }
+
+  .split-rule {
+    width: 100%;
+    height: 1px;
+  }
+}

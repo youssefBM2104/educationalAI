@@ -1,10 +1,18 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.postgre import init_db
 from backend.api.routes_documents import router as documents_router
 from backend.api.rag import router as rag_router
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # tighten to specific origins in production
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")

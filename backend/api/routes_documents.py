@@ -65,6 +65,26 @@ async def upload_document(
         os.unlink(tmp_path)
 
 
+@router.get("/")
+def list_documents(course_id: str = "default", db: Session = Depends(get_db)):
+    docs = (
+        db.query(Document)
+        .filter(Document.course_id == course_id)
+        .order_by(Document.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "document_id": d.id,
+            "filename": d.filename,
+            "status": d.status,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+            "error_msg": d.error_msg,
+        }
+        for d in docs
+    ]
+
+
 @router.get("/{document_id}/status")
 def get_document_status(document_id: str, db: Session = Depends(get_db)):
     doc = db.get(Document, document_id)

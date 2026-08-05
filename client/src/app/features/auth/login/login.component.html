@@ -1,0 +1,48 @@
+<div
+  class="login-screen"
+  [class.login-screen--lecturer-active]="selectedRole() === 'lecturer'"
+  [class.login-screen--student-active]="selectedRole() === 'student'"
+>
+  <!-- Wordmark centred over the divider — belongs to neither half -->
+  <header class="login-screen__brand" aria-label="Application branding">
+    <span class="brand__name">Praxis</span>
+    <span class="brand__sub">AI-Powered Education</span>
+  </header>
+
+  <!-- The split -->
+  <div class="login-screen__split" role="main">
+
+    <app-role-panel
+      role="lecturer"
+      [isSelected]="selectedRole() === 'lecturer'"
+      [otherSelected]="selectedRole() === 'student'"
+      (roleSelected)="selectRole('lecturer')"
+    >
+      @if (selectedRole() === 'lecturer') {
+        <app-auth-form
+          role="lecturer"
+          (submitted)="onLoginSuccess($event)"
+          (back)="clearRole()"
+        />
+      }
+    </app-role-panel>
+
+    <div class="split-rule" aria-hidden="true"></div>
+
+    <app-role-panel
+      role="student"
+      [isSelected]="selectedRole() === 'student'"
+      [otherSelected]="selectedRole() === 'lecturer'"
+      (roleSelected)="selectRole('student')"
+    >
+      @if (selectedRole() === 'student') {
+        <app-auth-form
+          role="student"
+          (submitted)="onLoginSuccess($event)"
+          (back)="clearRole()"
+        />
+      }
+    </app-role-panel>
+
+  </div>
+</div>
