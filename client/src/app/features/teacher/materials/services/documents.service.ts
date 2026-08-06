@@ -3,6 +3,7 @@ import { HttpClient, HttpEventType, HttpRequest } from '@angular/common/http';
 import { Observable, filter, map } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { DocumentRecord, StatusResponse, UploadResponse } from '../models/document.model';
+import { ExtractionData } from '../models/extraction.model';
 
 export interface UploadProgress {
   type: 'progress';
@@ -55,5 +56,9 @@ export class DocumentsService {
 
   getStatus(documentId: string): Observable<StatusResponse> {
     return this.http.get<StatusResponse>(`${this.base}/${documentId}/status`);
+  }
+
+  getExtraction(documentId: string): Observable<ExtractionData> {
+    return this.http.get<ExtractionData>(`${this.base}/${documentId}/extraction`);
   }
 }

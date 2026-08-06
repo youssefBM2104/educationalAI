@@ -1,36 +1,71 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { DocumentRecord } from '../../models/document.model';
-import { ExtractionData, KgEdge, KgElement, KgNode } from '../../models/extraction.model';
-import { MOCK_EXTRACTION } from '../../models/extraction.mock';
+import { ExtractionData, ImageRecord } from '../../models/extraction.model';
+import { DocumentsService } from '../../services/documents.service';
+import { KgGraphComponent } from '../kg-graph/kg-graph.component';
+import { environment } from '../../../../../../environments/environment';
+import { catchError, EMPTY } from 'rxjs';
 
 type Tab = 'chunks' | 'images' | 'kg';
 
 @Component({
   selector: 'app-extraction-preview',
   standalone: true,
+  imports: [KgGraphComponent],
   templateUrl: './extraction-preview.component.html',
   styleUrl: './extraction-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ExtractionPreviewComponent {
+export class ExtractionPreviewComponent implements OnInit {
   readonly document = input.required<DocumentRecord>();
 
   readonly activeTab = signal<Tab>('chunks');
+  readonly data = signal<ExtractionData | null>(null);
+  readonly isLoading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly selectedImage = signal<ImageRecord | null>(null);
 
-  /**
-   * DEV — served from mock until GET /documents/{id}/extraction exists.
-   * Once the endpoint ships, inject DocumentsService and call it here,
-   * keyed on document().document_id.
-   */
-  readonly data: ExtractionData = MOCK_EXTRACTION;
-  readonly isMock = true;
+  private readonly svc = inject(DocumentsService);
+
+  ngOnInit(): void {
+    this.svc
+      .getExtraction(this.document().document_id)
+      .pipe(
+        catchError(() => {
+          this.error.set('Could not load extraction data.');
+          this.isLoading.set(false);
+          return EMPTY;
+        })
+      )
+      .subscribe(result => {
+        this.data.set(result);
+        this.isLoading.set(false);
+      });
+  }
 
   get conceptCount(): number {
-    return this.data.kg.filter(el => 'label' in el).length;
+    return (this.data()?.kg ?? []).filter(el => 'label' in el).length;
   }
 
   setTab(tab: Tab): void { this.activeTab.set(tab); }
 
-  isNode(el: KgElement): el is KgNode { return 'label' in el; }
-  isEdge(el: KgElement): el is KgEdge { return 'predicate' in el; }
+  selectImage(img: ImageRecord): void { this.selectedImage.set(img); }
+  closeImage(): void { this.selectedImage.set(null); }
+
+  truncate(text: string | null, limit = 120): string {
+    if (!text) return '';
+    return text.length > limit ? text.slice(0, limit) + '…' : text;
+  }
+
+  imageUrl(path: string | null): string | null {
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${environment.apiUrl}${path}`;
+  }
 }

@@ -146,6 +146,15 @@
   border: 1px solid $line;
   border-radius: $radius-md;
   overflow: hidden;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover { border-color: $teal-accent; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  &--active { border-color: $teal-accent; box-shadow: 0 0 0 2px $teal-soft; }
 
   &__visual {
     height: 120px;
@@ -187,6 +196,85 @@
     font-size: 0.8125rem;
     color: $ink;
     line-height: 1.5;
+    margin: 0;
+  }
+}
+
+// ── Image detail panel ────────────────────────────────────────────────────────
+
+.image-detail {
+  position: relative;
+  border: 1px solid $line;
+  border-radius: $radius-lg;
+  background: white;
+  margin-bottom: $space-24;
+  overflow: hidden;
+
+  &__close {
+    position: absolute;
+    top: $space-12;
+    right: $space-12;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid $line;
+    background: white;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: $muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: background 0.15s ease;
+    &:hover { background: $bg; color: $ink; }
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 320px;
+
+    @media (max-width: 600px) { grid-template-columns: 1fr; }
+  }
+
+  &__visual {
+    background: linear-gradient(135deg, #E7ECF3, $teal-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-height: 480px;
+  }
+
+  &__info {
+    padding: $space-32;
+    display: flex;
+    flex-direction: column;
+    gap: $space-12;
+    border-left: 1px solid $line;
+    overflow-y: auto;
+    max-height: 480px;
+  }
+
+  &__desc {
+    font-family: $font-sans;
+    font-size: 0.9375rem;
+    color: $ink;
+    line-height: 1.7;
+    margin: 0;
+    flex: 1;
+  }
+
+  &__meta {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $muted;
     margin: 0;
   }
 }

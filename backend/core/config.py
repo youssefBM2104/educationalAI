@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     # MinIO
     minio_endpoint: str = "localhost:9000"
+    # Browser-accessible MinIO host used in presigned URLs.
+    # Inside Docker the endpoint is an internal hostname (e.g. minio:9000);
+    # set this to the host-exposed address so the browser can reach the URL.
+    minio_public_endpoint: str = "localhost:9000"
     minio_root_user: str = ""
     minio_root_password: str = ""
     minio_bucket_originals: str = "originals"

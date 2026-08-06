@@ -65,3 +65,25 @@ async def get_document_status(document_id: str):
             raise HTTPException(status_code=502, detail=f"ETL backend unreachable: {exc}")
 
     return JSONResponse(status_code=resp.status_code, content=resp.json())
+
+
+@router.get("/{document_id}/images/{image_id}")
+async def get_image(document_id: str, image_id: str):
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        try:
+            resp = await client.get(_etl_url(f"/documents/{document_id}/images/{image_id}"))
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"ETL backend unreachable: {exc}")
+    from fastapi.responses import Response
+    return Response(content=resp.content, media_type="image/png")
+
+
+@router.get("/{document_id}/extraction")
+async def get_extraction(document_id: str):
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        try:
+            resp = await client.get(_etl_url(f"/documents/{document_id}/extraction"))
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"ETL backend unreachable: {exc}")
+
+    return JSONResponse(status_code=resp.status_code, content=resp.json())
