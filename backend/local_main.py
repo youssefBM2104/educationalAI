@@ -1,31 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.db.postgre import init_db
-from backend.api.routes_documents import router as documents_router
-from backend.api.routes_shared import router as shared_router
+from backend.api.routes_documents_proxy import router as documents_router
 from backend.api.routes_sync import router as sync_router
 from backend.api.rag import router as rag_router
 
-app = FastAPI()
+app = FastAPI(title="Local Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten to specific origins in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
-
-
 app.include_router(documents_router)
-app.include_router(shared_router)
 app.include_router(sync_router)
 app.include_router(rag_router)
+
 
 @app.get("/health")
 def health():

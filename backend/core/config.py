@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     nim_api_key: str = ""
     # OpenAI — GPT-5 family (per-agent model plan wired in core/models.py)
     openai_api_key: str = ""
+    # Shared DB — base URL of the export service (ETL stack's FastAPI app).
+    # Used by POST /sync/import.  Override with SHARED_DB_URL env var.
+    shared_db_url: str = "http://host.docker.internal:8421"
     # Google Gemini — held-out judge for offline evaluation (different provider than the
     # pipeline, so the judge never grades output from its own model family)
     google_api_key: str = ""

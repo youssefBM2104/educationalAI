@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.config import settings
 from backend.db.postgre import Document, DocumentStatus, get_db
-from backend.db.minio_client import  sha256_of_file, upload_file
+from backend.db.minio_client import sha256_of_file, upload_file
 from backend.tasks.ingestion_tasks import process_document
 
 import tempfile
@@ -21,7 +21,6 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    # Save upload to a temp file so we can hash it and pass it to MinIO
     suffix = os.path.splitext(file.filename)[1]
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(await file.read())
@@ -30,7 +29,6 @@ async def upload_document(
     try:
         file_hash = sha256_of_file(tmp_path)
 
-        # Dedup: reject if this exact file is already in the DB
         existing = db.query(Document).filter(Document.sha256_hash == file_hash).first()
         if existing:
             return JSONResponse(

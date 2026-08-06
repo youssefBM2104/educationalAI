@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile
     container_name: edu_backend
     user: root
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn backend.local_main:app --host 0.0.0.0 --port 8000
     ports:
       - "8420:8000"
     environment:
@@ -31,6 +31,11 @@ services:
       - NIM_API_KEY=${NIM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - TORCHDYNAMO_DISABLE=1
+      # URL of the ETL stack's export API. Override with SHARED_DB_URL env var
+      # for cloud deployment — nothing else about the sync contract changes.
+      - SHARED_DB_URL=http://host.docker.internal:8421
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # required on Linux
     depends_on:
       postgres:
         condition: service_healthy
