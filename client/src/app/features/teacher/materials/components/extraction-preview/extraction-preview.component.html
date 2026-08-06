@@ -1,0 +1,105 @@
+<div class="preview">
+
+  <!-- Dev notice — remove when real endpoint is wired -->
+  @if (isMock) {
+    <div class="preview__mock-banner" role="status">
+      <strong>DEV — mock data.</strong>
+      Backend endpoint <code>GET /documents/&#123;id&#125;/extraction</code> not yet implemented.
+      Wire <code>ExtractionPreviewComponent</code> to that endpoint once it ships.
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="preview__header">
+    <div>
+      <h2 class="preview__title">{{ document().filename }}</h2>
+      <p class="preview__meta">
+        {{ data.chunks.length }} chunks · {{ data.images.length }} images · {{ conceptCount }} concepts
+      </p>
+    </div>
+    <button class="preview__sync-btn" type="button" disabled title="Synced automatically during ingestion">
+      Synced to knowledge base
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="preview__tabs" role="tablist">
+    <button
+      class="preview__tab"
+      [class.preview__tab--active]="activeTab() === 'chunks'"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'chunks'"
+      (click)="setTab('chunks')"
+    >Text chunks</button>
+    <button
+      class="preview__tab"
+      [class.preview__tab--active]="activeTab() === 'images'"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'images'"
+      (click)="setTab('images')"
+    >Images ({{ data.images.length }})</button>
+    <button
+      class="preview__tab"
+      [class.preview__tab--active]="activeTab() === 'kg'"
+      role="tab"
+      [attr.aria-selected]="activeTab() === 'kg'"
+      (click)="setTab('kg')"
+    >Knowledge graph</button>
+  </div>
+
+  <!-- Tab panels -->
+  <div role="tabpanel">
+
+    @if (activeTab() === 'chunks') {
+      <div class="chunks">
+        @for (chunk of data.chunks; track chunk.chunk_id) {
+          <div class="chunk">
+            <p class="chunk__label">
+              Chunk {{ $index + 1 }}
+              @if (chunk.page_number) { · Page {{ chunk.page_number }} }
+            </p>
+            <p class="chunk__text">{{ chunk.text }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    @if (activeTab() === 'images') {
+      <div class="images-grid">
+        @for (img of data.images; track img.image_id) {
+          <div class="image-card">
+            <div class="image-card__visual">
+              @if (img.url) {
+                <img [src]="img.url" [alt]="img.vlm_description ?? 'Extracted figure'" class="image-card__img" />
+              } @else {
+                <span class="image-card__placeholder-label">
+                  @if (img.page_number) { Page {{ img.page_number }} }
+                </span>
+              }
+            </div>
+            <div class="image-card__caption">
+              <p class="image-card__vlm-label">VLM description</p>
+              <p class="image-card__desc">{{ img.vlm_description ?? 'No description available.' }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (activeTab() === 'kg') {
+      <div class="kg-section">
+        <p class="kg-section__hint">Concept chain extracted from this document.</p>
+        <div class="kg-chain">
+          @for (el of data.kg; track $index) {
+            @if (isNode(el)) {
+              <span class="kg-node" [class.kg-node--secondary]="el.type === 'secondary'">{{ el.label }}</span>
+            } @else if (isEdge(el)) {
+              <span class="kg-edge" aria-hidden="true">→</span>
+            }
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

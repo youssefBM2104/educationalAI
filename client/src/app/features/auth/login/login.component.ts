@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthFormComponent } from '../components/auth-form/auth-form.component';
 import { RolePanelComponent } from '../components/role-panel/role-panel.component';
 import { LoginCredentials, UserRole } from '../auth.types';
@@ -12,13 +13,16 @@ import { LoginCredentials, UserRole } from '../auth.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
+  private readonly router = inject(Router);
+
   readonly selectedRole = signal<UserRole | null>(null);
 
   selectRole(role: UserRole): void { this.selectedRole.set(role); }
   clearRole():                void { this.selectedRole.set(null); }
 
   onLoginSuccess(credentials: LoginCredentials): void {
-    // TODO: navigate to role-specific dashboard
-    console.log('[Login] authenticated as:', credentials.role);
+    // TODO: route to student dashboard when that page is built
+    const destination = credentials.role === 'lecturer' ? '/teacher' : '/teacher';
+    this.router.navigate([destination]);
   }
 }

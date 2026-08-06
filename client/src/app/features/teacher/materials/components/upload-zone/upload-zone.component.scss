@@ -1,0 +1,82 @@
+@use 'tokens' as *;
+
+.upload-zone {
+  border: 2px dashed #B9C2D0;
+  border-radius: $radius-md;
+  padding: $space-48 $space-24;
+  text-align: center;
+  background: $bg;
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &--dragging {
+    border-color: $navy-primary;
+    background: #EDF1F8;
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto $space-16;
+    border-radius: 50%;
+    background: #E7ECF3;
+    color: $navy-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    font-family: $font-serif;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: $ink;
+    margin: 0 0 $space-4;
+  }
+
+  &__desc {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $muted;
+    margin: 0 0 $space-16;
+    max-width: 360px;
+    margin-inline: auto;
+    line-height: 1.5;
+    margin-bottom: $space-16;
+  }
+
+  &__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__btn {
+    background: $navy-primary;
+    color: white;
+    border: none;
+    padding: $space-12 $space-24;
+    border-radius: $radius-sm;
+    font-family: $font-sans;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+
+    &:hover  { background: $navy-deep; }
+    &:active { transform: scale(0.98); }
+
+    &:focus-visible {
+      outline: 3px solid $navy-primary;
+      outline-offset: 2px;
+    }
+  }
+
+  &__hint {
+    font-family: $font-sans;
+    margin: $space-12 0 0;
+    font-size: 0.75rem;
+    color: $muted;
+  }
+}
