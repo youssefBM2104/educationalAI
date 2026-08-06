@@ -1,8 +1,35 @@
 <div class="materials">
 
   <div class="page-header">
-    <h1 class="page-header__title">Course materials</h1>
-    <p class="page-header__sub">Upload lecture material to build the knowledge base students will query.</p>
+    <div>
+      <h1 class="page-header__title">Course materials</h1>
+      <p class="page-header__sub">Upload lecture material to build the knowledge base students will query.</p>
+    </div>
+    <div class="sync-area">
+      <button
+        class="sync-btn"
+        [class.sync-btn--syncing]="syncState() === 'syncing'"
+        [class.sync-btn--done]="syncState() === 'done'"
+        [class.sync-btn--error]="syncState() === 'error'"
+        [disabled]="syncState() === 'syncing'"
+        type="button"
+        (click)="syncToLocal()"
+      >
+        @if (syncState() === 'syncing') { Syncing… }
+        @else if (syncState() === 'done') { ✓ Synced }
+        @else if (syncState() === 'error') { Retry sync }
+        @else { Sync to local }
+      </button>
+
+      @if (syncState() === 'done' && syncResult(); as r) {
+        <p class="sync-summary">
+          {{ r.qdrant_points_upserted }} chunks · {{ r.neo4j_nodes_upserted }} nodes · {{ r.neo4j_relationships_upserted }} edges
+        </p>
+      }
+      @if (syncState() === 'error') {
+        <p class="sync-summary sync-summary--error">{{ syncError() }}</p>
+      }
+    </div>
   </div>
 
   <!-- Upload + table card -->

@@ -13,6 +13,12 @@
 // ── Page header ───────────────────────────────────────────────────────────────
 
 .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $space-24;
+  flex-wrap: wrap;
+
   &__title {
     font-family: $font-serif;
     font-size: 1.75rem;
@@ -27,6 +33,44 @@
     color: $muted;
     margin: 0;
   }
+}
+
+.sync-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-8;
+  flex-shrink: 0;
+}
+
+.sync-btn {
+  padding: $space-8 $space-24;
+  border-radius: $radius-sm;
+  font-family: $font-sans;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+  background: $navy-primary;
+  color: white;
+
+  &:hover:not(:disabled) { background: $navy-deep; }
+  &:disabled { opacity: 0.6; cursor: default; }
+
+  &--syncing { background: $muted; }
+  &--done    { background: $teal-accent; }
+  &--error   { background: #C0392B; }
+}
+
+.sync-summary {
+  font-family: $font-sans;
+  font-size: 0.8125rem;
+  color: $muted;
+  margin: 0;
+  text-align: right;
+
+  &--error { color: #C0392B; }
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────

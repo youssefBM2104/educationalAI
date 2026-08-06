@@ -5,6 +5,14 @@ import { environment } from '../../../../../environments/environment';
 import { DocumentRecord, StatusResponse, UploadResponse } from '../models/document.model';
 import { ExtractionData } from '../models/extraction.model';
 
+export interface SyncResult {
+  course_id: string;
+  qdrant_points_upserted: number;
+  neo4j_nodes_upserted: number;
+  neo4j_relationships_upserted: number;
+  image_refs_received: number;
+}
+
 export interface UploadProgress {
   type: 'progress';
   percent: number;
@@ -60,5 +68,9 @@ export class DocumentsService {
 
   getExtraction(documentId: string): Observable<ExtractionData> {
     return this.http.get<ExtractionData>(`${this.base}/${documentId}/extraction`);
+  }
+
+  sync(courseId = DEFAULT_COURSE_ID): Observable<SyncResult> {
+    return this.http.post<SyncResult>(`${environment.apiUrl}/sync/import`, { course_id: courseId });
   }
 }

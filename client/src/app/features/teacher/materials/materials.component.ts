@@ -9,9 +9,10 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { UploadZoneComponent } from './components/upload-zone/upload-zone.component';
 import { ExtractionPreviewComponent } from './components/extraction-preview/extraction-preview.component';
 import { DocumentRecord } from './models/document.model';
-import { DocumentsService, DEFAULT_COURSE_ID } from './services/documents.service';
+import { DocumentsService, DEFAULT_COURSE_ID, SyncResult } from './services/documents.service';
 
 type TerminalStatus = 'ready' | 'failed';
+type SyncState = 'idle' | 'syncing' | 'done' | 'error';
 
 @Component({
   selector: 'app-materials',
@@ -29,6 +30,9 @@ export class MaterialsComponent implements OnInit {
   readonly selectedDocId = signal<string | null>(null);
   readonly isLoading     = signal(true);
   readonly listError     = signal<string | null>(null);
+  readonly syncState     = signal<SyncState>('idle');
+  readonly syncResult    = signal<SyncResult | null>(null);
+  readonly syncError     = signal<string | null>(null);
 
   readonly selectedDoc = computed(() =>
     this.documents().find(d => d.document_id === this.selectedDocId()) ?? null
@@ -85,6 +89,26 @@ export class MaterialsComponent implements OnInit {
       },
       error: () => {
         this.updateDoc(tempId, { status: 'failed', error_msg: 'Upload failed.', uploadProgress: undefined });
+      },
+    });
+  }
+
+  syncToLocal(): void {
+    if (this.syncState() === 'syncing') return;
+    this.syncState.set('syncing');
+    this.syncResult.set(null);
+    this.syncError.set(null);
+
+    this.svc.sync(DEFAULT_COURSE_ID).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: result => {
+        this.syncResult.set(result);
+        this.syncState.set('done');
+      },
+      error: () => {
+        this.syncError.set('Sync failed. Is the ETL backend reachable?');
+        this.syncState.set('error');
       },
     });
   }
