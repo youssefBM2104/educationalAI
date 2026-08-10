@@ -81,7 +81,7 @@ def main():
     ap.add_argument("--from", dest="from_file", help="score a saved exam JSON instead of generating")
     ap.add_argument("--query", default=DEFAULT_QUERY)
     ap.add_argument(
-        "--judge", default="gemini", choices=["gemini", "llama31"],
+        "--judge", default="gemini", choices=["gemini", "llama31", "gpt4o"],
         help="gemini = held-out judge (report these numbers, 20 calls/day free); "
              "llama31 = same model as the pipeline's own judge_agent, so it is biased in the "
              "pipeline's favour — use it to iterate on rubrics, never to report results",

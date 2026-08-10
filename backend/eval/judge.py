@@ -24,10 +24,19 @@ RAW_MIN, RAW_MAX = 1, 5
 #
 DEFAULT_BACKEND = "gemini"
 
+# "gpt4o" — a DIFFERENT model from the pipeline's own judge_agent (llama-3.1) and a different one
+#           from the generator (gpt-5). Runs on the OpenAI key, so it has none of gemini's 20/day
+#           free-tier cap and can score the whole batch in one go. Note: same *provider* as the
+#           generator, so it is not as strictly held-out as gemini — reasonable to report, but
+#           gemini remains the cleanest held-out number when its quota allows.
 _BACKENDS = {
     "gemini": {"model": "gemini-2.5-flash", "throttle": 6.5},   # gemini-2.0-flash: free quota = 0
     "llama31": {"model": "meta/llama-3.1-70b-instruct", "throttle": 0.0},
+    "gpt4o": {"model": "gpt-4o", "throttle": 0.0},
 }
+
+# Judge backends served through our own MODELS registry (NVIDIA NIM / OpenAI) vs. the Gemini SDK.
+_REGISTRY_MODELS = {"llama31": "llama31", "gpt4o": "gpt-4o"}
 
 _backend = DEFAULT_BACKEND
 _judge = None
@@ -41,7 +50,12 @@ def set_judge(backend: str) -> None:
 
 
 def judge_name() -> str:
-    tag = "" if _backend == "gemini" else "  [NOT held-out — do not report]"
+    if _backend == "gemini":
+        tag = ""                                              # cleanest held-out judge
+    elif _backend == "gpt4o":
+        tag = "  [different model, but same provider as generator]"
+    else:  # llama31 — the pipeline's own judge model
+        tag = "  [NOT held-out — do not report]"
     return f"{_BACKENDS[_backend]['model']}{tag}"
 
 
@@ -52,9 +66,9 @@ def _throttle_seconds() -> float:
 def get_judge():
     global _judge
     if _judge is None:
-        if _backend == "llama31":
+        if _backend in _REGISTRY_MODELS:
             from backend.core.models import MODELS
-            _judge = MODELS["llama31"]
+            _judge = MODELS[_REGISTRY_MODELS[_backend]]
         else:
             from langchain_google_genai import ChatGoogleGenerativeAI
             if not settings.google_api_key:

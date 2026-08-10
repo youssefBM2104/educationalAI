@@ -1,180 +1,74 @@
 """
-Standalone test for the slide-generation pipeline.
+Standalone test for the slide-generation pipeline (new design).
 
-The lecture graph expects `rag_chunks` and `kg_context` already in state
-(the RAG retrieval step is handled by the top-level orchestrator graph).
-This script loads the saved RAG fixture, maps it into LectureState,
-and runs the full pipeline:
-
-    planner → content_generator → slide_builder → export
-
-Two output files will be written under  outputs/lectures/ :
-    <course_title>.pptx   (default)
-    <course_title>.pdf    (if --format pdf is passed)
+Loads a saved RAG-service fixture into LectureState and runs the compiled slide graph end-to-end:
+init -> composer -> planner -> verification -> (retry loop) -> export.
 
 Run:
     python -m backend.tests.test_slide_generation
-    python -m backend.tests.test_slide_generation "Explain passive waiting and mutexes" --format pdf
-    python -m backend.tests.test_slide_generation "Explain passive waiting and mutexes" --format pptx
+    python -m backend.tests.test_slide_generation "deadlock detection" pdf
+    python -m backend.tests.test_slide_generation "thread sync" pptx path/to/template.pptx
 """
-
 import json
 import sys
 import logging
-import argparse
 from pathlib import Path
 
-from backend.agents.slides_generation.slides_graph import get_slides_graph
+from backend.agents.slide_generation.slides_graph import get_slide_graph
+from backend.eval.usage import UsageTracker
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s: %(message)s")
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
-# ---------------------------------------------------------------------------
-# Fixture path
-# ---------------------------------------------------------------------------
-FIXTURE = Path(__file__).parent / "fixtures" / "rag_passive_waiting.json"
-
-DEFAULT_QUERY = (
-    "Generate a lecture on passive waiting, mutexes, and deadlocks "
-    "in thread synchronization"
-)
+FIXTURE = Path(__file__).parent / "fixtures" / "inflation.json"
 
 
-# ---------------------------------------------------------------------------
-# State loader
-# ---------------------------------------------------------------------------
+def main():
+    query = sys.argv[1] if len(sys.argv) > 1 else "Create lecture slides about inflation"
+    fmt = sys.argv[2] if len(sys.argv) > 2 else "pptx"
+    template = sys.argv[3] if len(sys.argv) > 3 else None   # path to a .pptx visual template
 
-def load_state(query: str, output_format: str) -> dict:
-    if not FIXTURE.exists():
-        raise FileNotFoundError(
-            f"Fixture not found at {FIXTURE}.\n"
-            "Make sure rag_passive_waiting.json is in backend/tests/fixtures/"
-        )
-
-    raw = json.loads(FIXTURE.read_text(encoding="utf-8"))
-
-    return {
-        "user_id":       "test-user",
-        "course_id":     raw.get("course_id", "test"),
-        "query":         query,
-        # RAG retrieval normally maps raw["chunks"] → state["rag_chunks"]
-        "rag_chunks":    raw["chunks"],
-        # Convert fixture's relation format to the triples format agents expect
-        "kg_context":    raw["kg_context"],
-        "output_format": output_format,
+    rag = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    state = {
+        "user_id": "test-user",
+        "course_id": rag.get("course_id") or "test",
+        "query": query,
+        "rag_chunks": rag["chunks"],
+        "kg_context": rag["kg_context"],
+        "output_format": fmt,
+        "max_attempts": 2,
     }
+    if template:
+        state["slide_template_pptx"] = template
+        print(f"(using visual template: {template})")
 
+    print(f"\n=== QUERY ===\n{query}  (format={fmt})\n")
+    app = get_slide_graph()
+    with UsageTracker() as tracker:
+        result = app.invoke(state, config={"callbacks": [tracker]})
 
-# ---------------------------------------------------------------------------
-# Pretty printers
-# ---------------------------------------------------------------------------
+    composer = result.get("composer_output") or {}
+    print(f"\n=== HEADINGS ({len(composer.get('headings', []))}) ===")
+    for h in composer.get("headings", []):
+        print(f"  [{h['heading_id']}] {h['title']}  (imgs: {h.get('image_refs')})")
 
-def _print_plan(plan: dict) -> None:
-    print(f"\n{'='*60}")
-    print(f"  LECTURE PLAN")
-    print(f"{'='*60}")
-    print(f"  Title            : {plan.get('course_title')}")
-    print(f"  Estimated slides : {plan.get('estimated_slides')}")
-    print(f"  Sections         : {len(plan.get('sections', []))}")
-    for s in plan.get("sections", []):
-        print(f"\n  [{s['order']}] {s['title']}")
-        print(f"       objective : {s.get('learning_objective')}")
-        print(f"       concepts  : {', '.join(s.get('key_concepts', []))}")
+    deck = result.get("lecture_slides") or {}
+    print(f"\n=== SLIDES ({len(deck.get('slides', []))}) ===")
+    for s in deck.get("slides", []):
+        print(f"  [{s['slide_id']}<-{s['heading_id']}] {s['title']}  ({s.get('layout')})")
+        for b in s.get("bullets", []):
+            print(f"      • {b}")
 
+    fb = result.get("verification_feedback") or {}
+    print(f"\n=== VERIFICATION ===")
+    print(f"  passed={result.get('verification_passed')}  content_score={fb.get('content_score')}")
+    for i in fb.get("issues", []):
+        print(f"  [{i['type']}] {i.get('heading_id') or i.get('slide_id') or ''}: {i['issue']}")
 
-def _print_content(content: list) -> None:
-    print(f"\n{'='*60}")
-    print(f"  CONTENT GENERATOR OUTPUT")
-    print(f"{'='*60}")
-    for section in content:
-        print(f"\n  Section {section['order']} — {section['section_title']}")
-        print(f"  Key points:")
-        for kp in section.get("key_points", []):
-            print(f"    • {kp}")
-        print(f"  Example : {section.get('example', '')[:120]}...")
-        speaker = section.get("speaker_notes", "")
-        if speaker:
-            print(f"  Speaker notes : {speaker[:100]}...")
+    print(f"\n=== EXPORT ===")
+    print(f"  status={result.get('export_status')}")
+    print(f"  file={result.get('lecture_output_path')}")
 
-
-def _print_slides(deck: dict) -> None:
-    
-    slides = deck.get("slides", [])
-    print(f"\n{'='*60}")
-    print(f"  SLIDE DECK  ({len(slides)} slides)")
-    print(f"{'='*60}")
-    for slide in slides:
-        stype = slide.get("type", "content").upper()
-        print(f"\n  [{slide['slide_number']}] [{stype}] {slide['title']}")
-        for b in slide.get("bullets", []):
-            print(f"    • {b}")
-        hint = slide.get("visual_hint", "")
-        if hint:
-            print(f"    💡 {hint}")
-
-
-def _print_export(result: dict) -> None:
-    path  = result.get("lecture_output_path", "")
-    size  = len(result.get("lecture_output_bytes", b""))
-    print(f"\n{'='*60}")
-    print(f"  EXPORT COMPLETE")
-    print(f"{'='*60}")
-    print(f"  File path : {path}")
-    print(f"  File size : {size:,} bytes")
-    if path:
-        abs_path = Path(path).resolve()
-        print(f"  Open with : {abs_path}")
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Test the slide generation pipeline")
-    parser.add_argument(
-        "query",
-        nargs="?",
-        default=DEFAULT_QUERY,
-        help="Topic for the lecture (default: passive waiting & mutexes)",
-    )
-    parser.add_argument(
-        "--format",
-        choices=["pptx", "pdf"],
-        default="pptx",
-        help="Output format (default: pptx)",
-    )
-    args = parser.parse_args()
-
-    print(f"\n{'='*60}")
-    print(f"  QUERY  : {args.query}")
-    print(f"  FORMAT : {args.format}")
-    print(f"{'='*60}\n")
-
-    # --- Load state ---
-    state = load_state(args.query, args.format)
-    logger.info("State loaded — %d chunks, %d KG triples",
-                len(state["rag_chunks"]), len(state["kg_context"]))
-
-    # --- Run graph ---
-    app    = get_slides_graph()
-    result = app.invoke(state)
-
-    # --- Print results at each stage ---
-    if result.get("lecture_plan"):
-        _print_plan(result["lecture_plan"])
-
-    if result.get("lecture_content"):
-        _print_content(result["lecture_content"])
-
-    if result.get("lecture_slides"):
-        _print_slides(result["lecture_slides"])
-
-    if result.get("lecture_output_path"):
-        _print_export(result)
-    else:
-        print("\n⚠️  No output file found in result — export may have failed.")
-        logger.error("Missing lecture_output_path in final state: %s", list(result.keys()))
+    tracker.report()
 
 
 if __name__ == "__main__":

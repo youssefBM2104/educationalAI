@@ -43,24 +43,34 @@ class ExamState(AgentState):
     exam_set: NotRequired[list] # final exam set
 
 class LectureState(AgentState):
- 
+
     # --- Lecture request ---
     output_format: NotRequired[Literal["pptx", "pdf"]]
- 
-    # --- Planner output ---
-    lecture_plan: NotRequired[dict]     # { course_title, estimated_slides, sections[] }
- 
-    # --- Content Generator output ---
-    lecture_content: NotRequired[list]  # list of { order, section_title, explanation,
-                                        #            key_points, example, speaker_notes }
- 
-    # --- Slide Builder output ---
-    lecture_slides: NotRequired[dict]   # { slides: [ { slide_number, type, title,
-                                        #               bullets, visual_hint, speaker_notes } ] }
- 
-    # --- Export output ---
-    lecture_output_path: NotRequired[str]   # path to the generated .pptx or .pdf file
-    lecture_output_bytes: NotRequired[bytes]  # raw bytes for API response if needed
+    slide_template: NotRequired[dict]        # layout library (structure) — how the planner arranges content
+    slide_template_pptx: NotRequired[object] # per-request visual .pptx (path str, or bytes from an upload);
+                                             # Export builds on it to inherit the theme (colours/fonts/background)
+
+    # --- Stage 1: Content Composer / Structure ---
+    composer_output: NotRequired[dict]
+
+    # --- Stage 2: Slide Planner ---
+    lecture_slides: NotRequired[dict]
+
+    # --- Stage 3: Verification (gates on content only) ---
+    verification_passed: NotRequired[bool]
+    verification_feedback: NotRequired[dict]
+    
+    retry_scope: NotRequired[dict]           
+
+    # --- Stage 4: Loop control ---
+    attempt: NotRequired[int]
+    max_attempts: NotRequired[int]
+    best_attempt: NotRequired[dict]
+
+    # --- Stage 5: Export ---
+    lecture_output_path: NotRequired[str]
+    lecture_output_bytes: NotRequired[bytes]
+    export_status: NotRequired[Literal["verified", "best_attempt_unverified"]]
 
 class LearningMaterialsState(AgentState):
  
