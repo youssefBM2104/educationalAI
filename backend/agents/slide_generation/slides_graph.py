@@ -6,7 +6,7 @@ from backend.agents.state import LectureState
 from backend.agents.slide_generation.composer_agent import composer_agent
 from backend.agents.slide_generation.slide_planner_agent import slide_planner_agent
 from backend.agents.slide_generation.verification_agent import verification_agent
-from backend.agents.slide_generation.export import export_agent
+from backend.agents.slide_generation.export_html import export_html_agent
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def get_slide_graph():
     g.add_node("planner", slide_planner_agent)
     g.add_node("verification", verification_agent)
     g.add_node("retry_control", retry_control_node)
-    g.add_node("export", export_agent)
+    g.add_node("export", export_html_agent)
 
     g.add_edge(START, "init")
     g.add_edge("init", "composer")

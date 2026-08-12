@@ -2,7 +2,10 @@
 Standalone test for the slide-generation pipeline (new design).
 
 Loads a saved RAG-service fixture into LectureState and runs the compiled slide graph end-to-end:
-init -> composer -> planner -> verification -> (retry loop) -> export.
+init -> composer -> planner -> verification -> (retry loop) -> export (HTML renderer).
+
+Export is the HTML renderer only: the LLM writes styled HTML per slide, rendered to image slides.
+A template .pptx is OPTIONAL — supply one to match its look, or omit for a neutral default style.
 
 Run:
     python -m backend.tests.test_slide_generation
@@ -19,13 +22,13 @@ from backend.eval.usage import UsageTracker
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
-FIXTURE = Path(__file__).parent / "fixtures" / "inflation.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "rag_inflation.json"
 
 
 def main():
     query = sys.argv[1] if len(sys.argv) > 1 else "Create lecture slides about inflation"
     fmt = sys.argv[2] if len(sys.argv) > 2 else "pptx"
-    template = sys.argv[3] if len(sys.argv) > 3 else None   # path to a .pptx visual template
+    template = sys.argv[3] if len(sys.argv) > 3 else None   # path to a .pptx visual template (optional)
 
     rag = json.loads(FIXTURE.read_text(encoding="utf-8"))
     state = {
@@ -37,9 +40,13 @@ def main():
         "output_format": fmt,
         "max_attempts": 2,
     }
+    # HTML renderer is the only path now. A template is optional: if given, its theme is extracted
+    # INLINE at export time (no disk, stateless); otherwise a neutral default style is used.
     if template:
         state["slide_template_pptx"] = template
-        print(f"(using visual template: {template})")
+        print(f"(template: {template} — theme extracted inline)")
+    else:
+        print("(no template — using the default HTML style)")
 
     print(f"\n=== QUERY ===\n{query}  (format={fmt})\n")
     app = get_slide_graph()

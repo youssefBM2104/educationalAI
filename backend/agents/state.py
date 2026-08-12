@@ -47,8 +47,9 @@ class LectureState(AgentState):
     # --- Lecture request ---
     output_format: NotRequired[Literal["pptx", "pdf"]]
     slide_template: NotRequired[dict]        # layout library (structure) — how the planner arranges content
-    slide_template_pptx: NotRequired[object] # per-request visual .pptx (path str, or bytes from an upload);
-                                             # Export builds on it to inherit the theme (colours/fonts/background)
+    slide_template_pptx: NotRequired[object] # per-request visual .pptx (path str, or bytes from an upload).
+                                             # HTML Export extracts its theme INLINE (no disk, stateless) into
+                                             # a style reference the LLM mimics; omit -> neutral default style.
 
     # --- Stage 1: Content Composer / Structure ---
     composer_output: NotRequired[dict]

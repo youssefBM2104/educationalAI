@@ -1,11 +1,3 @@
-"""
-Shared helpers for the slide-generation pipeline.
-
-The single non-negotiable rule (see instruction.md): `image_base64` must NEVER be serialized
-into an LLM prompt. It rides inline on the image objects in `rag_chunks` for the whole pipeline,
-but every prompt-construction site sends only the reasoning fields (image_id, vlm_description,
-page_number). Only Export reads the base64.
-"""
 from __future__ import annotations
 
 
@@ -92,14 +84,6 @@ def format_relations(kg: dict | None) -> str:
         return "(no relations)"
     return "\n".join(f"{r.get('from')} --[{r.get('type')}]--> {r.get('to')}" for r in rels)
 
-
-# --- Default template (layout library) ---------------------------------------------
-#
-# Each layout describes, in machine-readable text, WHAT it is for and WHAT slots it holds — so the
-# Slide Planner (an LLM that cannot see pixels) can match a heading's content shape to the right
-# layout and fill its slots. The `id` is the contract with Export: the planner emits a layout id,
-# Export renders that id using the visual template's matching master slide. A lecturer-supplied
-# template overrides this by passing the same shape on `slide_template`.
 
 DEFAULT_TEMPLATE = {
     "name": "default",
