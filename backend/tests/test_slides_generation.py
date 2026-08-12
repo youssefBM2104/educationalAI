@@ -8,16 +8,16 @@ Export is the HTML renderer only: the LLM writes styled HTML per slide, rendered
 A template .pptx is OPTIONAL — supply one to match its look, or omit for a neutral default style.
 
 Run:
-    python -m backend.tests.test_slide_generation
-    python -m backend.tests.test_slide_generation "deadlock detection" pdf
-    python -m backend.tests.test_slide_generation "thread sync" pptx path/to/template.pptx
+    python -m backend.tests.test_slides_generation
+    python -m backend.tests.test_slides_generation "deadlock detection" pdf
+    python -m backend.tests.test_slides_generation "thread sync" pptx path/to/template.pptx
 """
 import json
 import sys
 import logging
 from pathlib import Path
 
-from backend.agents.slide_generation.slides_graph import get_slide_graph
+from backend.agents.slides_generation.slides_graph import get_slides_graph
 from backend.eval.usage import UsageTracker
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -49,7 +49,7 @@ def main():
         print("(no template — using the default HTML style)")
 
     print(f"\n=== QUERY ===\n{query}  (format={fmt})\n")
-    app = get_slide_graph()
+    app = get_slides_graph()
     with UsageTracker() as tracker:
         result = app.invoke(state, config={"callbacks": [tracker]})
 

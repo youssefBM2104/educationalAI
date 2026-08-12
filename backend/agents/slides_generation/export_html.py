@@ -4,10 +4,10 @@ import tempfile
 from pathlib import Path
 
 from backend.agents.state import LectureState
-from backend.agents.slide_generation._common import build_image_index, images_of_chunk
-from backend.agents.slide_generation.template_store import reference_from_pptx, default_reference
-from backend.agents.slide_generation.html_slide_agent import generate_slide_html
-from backend.agents.slide_generation.html_render import html_to_png, pngs_to_pptx
+from backend.agents.slides_generation._common import build_image_index, images_of_chunk
+from backend.agents.slides_generation.template_store import reference_from_pptx, default_reference
+from backend.agents.slides_generation.html_slide_agent import generate_slide_html
+from backend.agents.slides_generation.html_render import html_to_png, pngs_to_pptx
 
 logger = logging.getLogger(__name__)
 

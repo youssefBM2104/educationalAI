@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LectureState
-from backend.agents.slide_generation._common import (
+from backend.agents.slides_generation._common import (
     all_concepts, available_images, format_chunks_for_prompt, format_relations,
 )
 

@@ -4,7 +4,7 @@ import re
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
-from backend.agents.slide_generation._common import image_reasoning_view
+from backend.agents.slides_generation._common import image_reasoning_view
 
 logger = logging.getLogger(__name__)
 

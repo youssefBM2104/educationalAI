@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.models import MODELS
 from backend.agents.state import LectureState
-from backend.agents.slide_generation._common import DEFAULT_TEMPLATE, format_chunks_for_prompt
+from backend.agents.slides_generation._common import DEFAULT_TEMPLATE, format_chunks_for_prompt
 
 logger = logging.getLogger(__name__)
 
