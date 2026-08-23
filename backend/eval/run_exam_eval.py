@@ -30,13 +30,12 @@ FIXTURE = Path("backend/tests/fixtures/rag_passive_waiting.json")
 SAVE_PATH = Path("outputs/eval/exam_latest.json")
 DEFAULT_QUERY = "Create 3 multiple choice questions about thread synchronization"
 
-
 # --- Generation (only when we don't already have an exam to score) ---
 
-def generate_exam(query: str) -> dict:
+def generate_exam(query: str, fixture: Path = FIXTURE) -> dict:
     from backend.agents.exam_generation.exam_graph import get_exam_graph
 
-    rag = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    rag = json.loads(Path(fixture).read_text(encoding="utf-8"))
     state = {
         "user_id": "eval",
         "course_id": rag.get("course_id", "test"),
@@ -76,10 +75,28 @@ def build_case(q: dict, result: dict) -> dict:
 
 # --- Report ---
 
+def print_exam(exam_set: list) -> None:
+    """Print the full generated exam — question, options, keyed answer, explanation — so it can be
+    read on the terminal without opening the saved JSON."""
+    print("\n" + "=" * 72)
+    print("GENERATED EXAM")
+    print("=" * 72)
+    for i, q in enumerate(exam_set, 1):
+        print(f"\nQ{i}  [{q.get('difficulty', '?')}]  {q.get('question', '')}")
+        for k, v in (q.get("choices") or {}).items():
+            print(f"   {k}. {v}")
+        if q.get("correct_answer"):
+            print(f"   Answer: {q.get('correct_answer')}")
+        expl = q.get("explanation") or q.get("model_answer")
+        if expl:
+            print(f"   Explanation: {expl}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from", dest="from_file", help="score a saved exam JSON instead of generating")
     ap.add_argument("--query", default=DEFAULT_QUERY)
+    ap.add_argument("--fixture", default=str(FIXTURE), help="RAG-output JSON to generate from")
     ap.add_argument(
         "--judge", default="gemini", choices=["gemini", "llama31", "gpt4o"],
         help="gemini = held-out judge (report these numbers, 20 calls/day free); "
@@ -93,13 +110,15 @@ def main():
         result = json.loads(Path(args.from_file).read_text(encoding="utf-8"))
         print(f"Scoring saved exam: {args.from_file}\n")
     else:
-        result = generate_exam(args.query)
+        result = generate_exam(args.query, Path(args.fixture))
 
     exam_set = result.get("exam_set") or []
     question_type = result.get("question_type", "mcq")
     if not exam_set:
         print("No questions in exam_set — nothing to evaluate.")
         return
+
+    print_exam(exam_set)
 
     # --- 1. Deterministic (free, exact) ---
     print("=" * 72)

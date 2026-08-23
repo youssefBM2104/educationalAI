@@ -11,7 +11,7 @@ from backend.agents.state import LearningMaterialsState
 logger = logging.getLogger(__name__)
 
 #llm = MODEL["small_ai"]
-llm = MODELS["llama31"]
+llm = MODELS["gpt-5-mini"]
 
 
 # ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ from backend.agents.state import LearningMaterialsState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["llama31"]
+llm = MODELS["gpt-5-mini"]
 
 # How many ideas to extract per concept depending on the requested detail level
 IDEA_LIMITS: dict[str, int] = {
