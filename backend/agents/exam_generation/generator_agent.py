@@ -63,8 +63,30 @@ class EssayQuestion(BaseModel):
 
 # --- Helpers ---
 
-def _format_kg(kg: dict | None) -> str:
+def _covered_concepts(chunks: list | None) -> set[str]:
+    """All concept ids that actually appear in a retrieved chunk (lowercased), across all chunks."""
+    covered: set[str] = set()
+    for c in chunks or []:
+        covered |= _concept_ids(c)
+    return covered
+
+
+def _format_kg(kg: dict | None, chunks: list | None = None) -> str:
+    """Render the KG edges the Generator may build a path from. Soft-grounded filter: when `chunks`
+    is given, keep an edge if AT LEAST ONE endpoint is covered by a retrieved chunk. This keeps the
+    graph rich — a covered concept can branch to its neighbours (good for near-miss distractors) and
+    two covered regions can bridge through a single hop — while dropping pure expansion↔expansion
+    edges that lead nowhere grounded. A path may thus touch an ungrounded concept, but the Judge
+    enforces that the ANSWER still traces to chunk text, so a question that leans on an ungrounded
+    concept's facts is regenerated. (Hard 'both endpoints covered' guaranteed grounding but starved
+    the graph — sparse paths caused redundancy and weak distractors.)"""
     relations = (kg or {}).get("relations", [])
+    if chunks is not None:
+        covered = _covered_concepts(chunks)
+        relations = [
+            r for r in relations
+            if str(r.get("from", "")).lower() in covered or str(r.get("to", "")).lower() in covered
+        ]
     if not relations:
         return "(no relations available)"
     return "\n".join(
@@ -183,7 +205,7 @@ You are the **Generator** in a multi-agent exam-generation pipeline.
 
 _Choose your path from these._
 
-{_format_kg(state.get('kg_context'))}
+{_format_kg(state.get('kg_context'), state.get('rag_chunks'))}
 
 # Source chunks
 

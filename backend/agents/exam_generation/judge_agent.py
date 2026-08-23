@@ -76,7 +76,11 @@ correct answer as the reference.
 # Criteria
 
 - **Relevance**: are the question + correct answer relevant and on-topic for the source chunks (no invented facts)?
-- **Answer grounding**: is the correct answer derivable from the source chunks (directly or via multi-hop)?
+- **Answer grounding**: is the correct answer derivable from the SOURCE CHUNKS (directly or via multi-hop)?
+  A claim that relies on a concept **absent from the source chunks is NOT grounded** — even if the
+  knowledge graph connects it. The KG shows *structure* (which concepts relate), it is **not evidence**;
+  verify every fact against the chunk TEXT, not against the graph. If the answer needs a fact about a
+  concept that no chunk states, fail grounding.
 {distractor_criterion}- **Path coverage**: does the SOLVER's reasoning traverse the reasoning path in order (not a shortcut)?
 - Also report **solver_correct**: does the solver's answer match the correct answer?
 
