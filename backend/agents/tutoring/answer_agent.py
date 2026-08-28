@@ -56,10 +56,12 @@ def _mistake_fix(state: TutoringState) -> str:
     res = llm.invoke([
         SystemMessage(content=MISTAKE_PROMPT),
         HumanMessage(content=(
-            f"Original question: {state['query']}\n"
+            # Static-first for prefix caching: query + context are constant across the session.
+            f"Original question: {state['query']}\n\n"
+            f"Context:\n{_context(state)}\n\n"
+            f"---\n"
             f"Student attempt: {state.get('student_answer')}\n"
-            f"Specific error: {diag.get('specific_error')}\n\n"
-            f"Context:\n{_context(state)}"
+            f"Specific error: {diag.get('specific_error')}"
         )),
     ])
     return res.content.strip()

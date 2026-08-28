@@ -9,7 +9,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["qwen"]
+llm = MODELS["gpt-5-nano"]
 
 INTAKE_PROMPT = """
 You parse a teacher's exam request into structured parameters.
@@ -26,7 +26,7 @@ class ExamSpec(BaseModel):
 
 
 def intake_agent(state: ExamState) -> dict:
-    spec = llm.with_structured_output(ExamSpec).invoke([
+    spec = llm.with_structured_output(ExamSpec, method="function_calling").invoke([
         SystemMessage(content=INTAKE_PROMPT),
         HumanMessage(content=state["query"]),
     ])

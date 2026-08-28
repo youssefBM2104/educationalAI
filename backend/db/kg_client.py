@@ -2,7 +2,7 @@
 import logging
 
 
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from backend.core.models import MODELS
 from backend.core.config import settings
 from backend.KG.kg_builder import KGBuilder
 
@@ -19,11 +19,9 @@ def get_kg():
 
         return _kg
     try:
-        llm = ChatNVIDIA(
-            model="meta/llama-3.1-70b-instruct",
-            api_key=settings.nim_api_key,
-            temperature=0.1,
-        )
+        # OpenAI (native function calling) — enables node_properties in the KG builder and gives
+        # much stronger extraction than the old llama-3.1-70b/NVIDIA prompt-based path.
+        llm = MODELS["gpt-5-mini"]
         _kg = KGBuilder(
             llm=llm,
             neo4j_uri=settings.neo4j_uri,

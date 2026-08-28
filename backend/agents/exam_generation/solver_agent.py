@@ -9,7 +9,7 @@ from backend.agents.state import ExamState
 
 logger = logging.getLogger(__name__)
 
-llm = MODELS["llama31"]
+llm = MODELS["gpt-4o"]
 
 
 # --- Output schema ---
@@ -72,7 +72,7 @@ knowledge and NO access to any knowledge graph or answer key.
 def solver_agent(state: ExamState) -> dict:
     question_type = state["question_type"]
     schema = MCQSolution if question_type == "mcq" else EssaySolution
-    structured_llm = llm.with_structured_output(schema)
+    structured_llm = llm.with_structured_output(schema, method="function_calling")
 
     result = structured_llm.invoke([
         SystemMessage(content=_build_prompt(state, question_type)),

@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
@@ -27,6 +29,18 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
     # NVIDIA NIM
     nim_api_key: str = ""
+    # OpenAI — GPT-5 family (per-agent model plan wired in core/models.py)
+    openai_api_key: str = ""
+    # Google Gemini — held-out judge for offline evaluation (different provider than the
+    # pipeline, so the judge never grades output from its own model family)
+    google_api_key: str = ""
+    # LangSmith — tracing for the LangGraph pipelines. Read from .env here, then exported to
+    # os.environ below so the LangChain callback layer (which reads the raw env, not this
+    # settings object) picks them up. Works with any provider, NVIDIA NIM included.
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "educational-ai"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
     # Ollama / VLM
     ollama_host: str = "http://ollama:11434"
     vlm_model: str = "llava:7b"
@@ -57,3 +71,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()
+
+# Export LangSmith config to the real environment so LangChain's callback tracer sees it.
+# setdefault -> a value already set in the shell wins over .env, and turning it off is just
+# LANGSMITH_TRACING=false in .env.
+if settings.langsmith_tracing and settings.langsmith_api_key:
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_API_KEY", settings.langsmith_api_key)
+    os.environ.setdefault("LANGSMITH_PROJECT", settings.langsmith_project)
+    os.environ.setdefault("LANGSMITH_ENDPOINT", settings.langsmith_endpoint)

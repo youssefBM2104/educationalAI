@@ -43,9 +43,12 @@ def diagnoser(state: TutoringState) -> dict:
     res = llm.with_structured_output(Diagnosis).invoke([
         SystemMessage(content=DIAG_PROMPT),
         HumanMessage(content=(
-            f"Original question: {state['query']}\n"
-            f"Student's derivation attempt: {state.get('student_answer')}\n\n"
-            f"Context:\n{_context(state)}"
+            # Static-first for prefix caching: query + context are constant across a session,
+            # so they form a cacheable prefix; the per-turn student answer goes last.
+            f"Original question: {state['query']}\n\n"
+            f"Context:\n{_context(state)}\n\n"
+            f"---\n"
+            f"Student's derivation attempt: {state.get('student_answer')}"
         )),
     ])
     logger.info("Diagnoser: %s", res.status)

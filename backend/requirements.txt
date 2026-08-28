@@ -34,3 +34,5 @@ datasets
 accelerate
 rouge-score
 httpx
+langchain-google-genai
+langchain-openai
