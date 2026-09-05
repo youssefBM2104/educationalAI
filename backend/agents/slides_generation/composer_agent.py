@@ -44,7 +44,7 @@ You are the **Content Composer** for a lecture-slide pipeline. Organize the retr
 into a clean heading structure with fully-written teaching content, and pick illustrative images.
 
 # Knowledge-graph relations
-_PART_OF / DEFINES suggest the same heading; PREREQUISITE suggests ordering._
+_PART_OF / IS_INSTANCE_OF suggest the same heading; PREREQUISITE suggests ordering._
 
 {format_relations(state.get('kg_context'))}
 

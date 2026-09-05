@@ -1,3 +1,4 @@
+import asyncio
 import tempfile
 import os
 import logging
@@ -51,9 +52,12 @@ def process_document(self, document_id: str, minio_key: str, course_id: str):
         chunks = parse_and_semantic_hierarchical_chunk(tmp_path, document_id, course_id)
         logger.info("[%s] Produced %d chunks", self.request.id, len(chunks))
 
-        logger.info("[%s] Building knowledge graph", self.request.id)
+        logger.info("[%s] Building knowledge graph (async)", self.request.id)
         kg = get_kg()
-        kg.build_from_dicts(chunks)
+        # Concurrent extraction — fans the per-chunk LLM calls out in parallel instead of
+        # sequential-with-throttle. The Celery worker runs this task synchronously, so drive the
+        # coroutine to completion with asyncio.run.
+        asyncio.run(kg.abuild_from_dicts(chunks))
         logger.info("[%s] Knowledge graph built", self.request.id)
 
         logger.info("[%s] Embedding chunks", self.request.id)

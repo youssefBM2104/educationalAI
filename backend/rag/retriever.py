@@ -71,8 +71,11 @@ def _get_kg_subgraph(concept_ids: list[str], hops: int = 1) -> dict:
             "relations": list[dict]  — edges: {"from", "type", "to"}
         }
 
-    Node labels:   Concept, Formula, Theorem, Example, Method, Definition
-    Relationships: PREREQUISITE, EXTENDS, DEFINES, APPLIES_TO, ILLUSTRATES, PART_OF
+    Node labels:   Concept, Formula, Theorem, Method, Example, Quantity
+    Relationships: PREREQUISITE, PART_OF, EXTENDS, ILLUSTRATES, APPLIES_TO,
+                   CAUSES, INCREASES, REDUCES, PREVENTS,
+                   CONTRASTS_WITH, TRADES_OFF_AGAINST, IS_INSTANCE_OF, COMMON_MISCONCEPTION_OF
+    (Traversal is relation-type agnostic — any new ontology edge is picked up automatically.)
     """
     # NOTE: Neo4j does not support parameters as variable-length path bounds.
     # [*1..$hops] with $hops as a Cypher parameter is silently ignored in most

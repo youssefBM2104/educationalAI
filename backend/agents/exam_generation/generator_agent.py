@@ -229,7 +229,7 @@ relation types:
 > Path: `["mutex", "passive waiting solutions", "Semaphores"]`  ← 3 concepts, 2 relations
 
 - Copy concept names **verbatim** from the graph.
-- `PART_OF`, `DEFINES`, `EXTENDS`, ... are **relations, not concepts** — never put them in the path.
+- `PART_OF`, `CAUSES`, `EXTENDS`, ... are **relations, not concepts** — never put them in the path.
 - Each consecutive pair must be joined by a relation that actually appears in the graph.
 - `kg_path` must contain **exactly {min_len}–{max_len} entries** — this is what sets the difficulty.
 
