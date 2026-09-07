@@ -18,7 +18,8 @@ def retrieve_node(state: AgentState) -> dict:
 
     merged = result["base_chunks"] + result["kg_chunks"]
     if merged:
-        merged = rerank_chunks(state["query"], merged)
+        # Rerank with the resolved topic query (not the raw instruction) for a clean final order.
+        merged = rerank_chunks(result.get("retrieval_query") or state["query"], merged)
 
     logger.info("Retrieve: %d chunks, %d relations",
                 len(merged), len(result["kg_context"].get("relations", [])))

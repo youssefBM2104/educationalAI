@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.rag.retriever import retrieve, retrieve_with_kg
+from backend.rag.retriever import retrieve, retrieve_with_kg, resolve_retrieval_query
 from backend.rag.reranker import rerank_chunks
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,17 @@ class QueryRequest(BaseModel):
         description="Restrict retrieval to a specific course. Omit to search all courses.",
     )
     top_k: int = Field(default=5, ge=1, le=20)
+    retrieval_query: str | None = Field(
+        default=None,
+        description="Explicit topic query to embed for retrieval; when set, skips the rewrite.",
+    )
+    rewrite_query: bool = Field(
+        default=True,
+        description=(
+            "Rewrite the request down to its topic before embedding (strips instruction wording "
+            "like 'create a 5-question MCQ exam about …' that pollutes retrieval relevance)."
+        ),
+    )
     rerank: bool = Field(
         default=True,
         description=(
@@ -64,11 +75,14 @@ def query_rag(request: QueryRequest):
     Hybrid dense+sparse retrieval with RRF fusion.
     Optionally reranked by BGE cross-encoder.
     """
+    # Resolve the topic query once so retrieval AND the rerank use the same clean signal.
+    eff_query = resolve_retrieval_query(request.query, request.retrieval_query, request.rewrite_query)
     try:
         chunks = retrieve(
-            query=request.query,
+            query=eff_query,
             top_k=request.top_k,
             course_id=request.course_id,
+            rewrite_query=False,
         )
     except Exception as e:
         logger.error("Retrieval failed for query=%r: %s", request.query, e)
@@ -80,7 +94,7 @@ def query_rag(request: QueryRequest):
 
     if request.rerank and chunks:
         try:
-            chunks = rerank_chunks(request.query, chunks, top_k=request.top_k)
+            chunks = rerank_chunks(eff_query, chunks, top_k=request.top_k)
         except Exception as e:
             logger.error("Reranking failed: %s", e)
             raise HTTPException(status_code=500, detail="Reranking failed. Check server logs.")
@@ -116,15 +130,34 @@ class KGQueryRequest(BaseModel):
         default=3,
         ge=1,
         le=10,
-        description="Max number of KG-sourced chunks to append before reranking.",
+        description="Max number of KG-sourced chunks to append after the cross-encoder relevance gate.",
+    )
+    kg_score_threshold: float = Field(
+        default=0.0,
+        description=(
+            "Minimum cross-encoder score for a KG-expanded chunk to be kept. KG chunks are always "
+            "scored by the cross-encoder (query × chunk) and only the relevant ones are appended; "
+            "0.0 ≈ the relevant/irrelevant boundary for the ms-marco cross-encoder."
+        ),
+    )
+    retrieval_query: str | None = Field(
+        default=None,
+        description="Explicit topic query to embed for retrieval; when set, skips the rewrite.",
+    )
+    rewrite_query: bool = Field(
+        default=True,
+        description=(
+            "Rewrite the request down to its topic before embedding (strips instruction wording "
+            "like 'create a 5-question MCQ exam about …' that pollutes retrieval relevance)."
+        ),
     )
     rerank: bool = Field(
         default=True,
         description=(
             "Rerank the merged (vector + KG) chunk list using BGE cross-encoder. "
             "When True, returns a single flat list sorted by cross-encoder score. "
-            "When False, vector chunks come first (by RRF score), "
-            "KG chunks appended at the end with score=null."
+            "When False, vector chunks come first (by RRF score), then the relevance-gated "
+            "KG chunks (each already carrying its cross-encoder score)."
         ),
     )
 
@@ -153,6 +186,9 @@ def query_rag_with_kg(request: KGQueryRequest):
             course_id=request.course_id,
             kg_hops=request.kg_hops,
             kg_extra_chunks=request.kg_extra_chunks,
+            kg_score_threshold=request.kg_score_threshold,
+            retrieval_query=request.retrieval_query,
+            rewrite_query=request.rewrite_query,
         )
     except Exception as e:
         logger.error("KG retrieval failed for query=%r: %s", request.query, e)
@@ -169,10 +205,10 @@ def query_rag_with_kg(request: KGQueryRequest):
 
     if request.rerank and merged:
         try:
-            # Rerank over the full merged set — cross-encoder decides final order
-            # top_k not applied here: reranker scores all candidates,
-            # consumer decides how many to use
-            merged = rerank_chunks(request.query, merged)
+            # Rerank over the full merged set — cross-encoder decides final order. Use the resolved
+            # topic query (not the raw instruction) so the final order matches retrieval.
+            # top_k not applied here: reranker scores all candidates, consumer decides how many.
+            merged = rerank_chunks(result.get("retrieval_query") or request.query, merged)
         except Exception as e:
             logger.error("Reranking failed: %s", e)
             raise HTTPException(status_code=500, detail="Reranking failed. Check server logs.")

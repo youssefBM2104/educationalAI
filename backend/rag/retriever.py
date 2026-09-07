@@ -1,5 +1,6 @@
 import logging
 
+from langchain_core.messages import SystemMessage, HumanMessage
 from neo4j import GraphDatabase
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -166,6 +167,52 @@ def _scroll_by_concepts(
 
 
 # ---------------------------------------------------------------------------
+# Query rewrite for retrieval
+# ---------------------------------------------------------------------------
+# A request like "Create a 5-question MCQ exam about X" is embedded verbatim during retrieval, and
+# the instruction words ("create", "exam", "5-question", "MCQ") pollute both the dense and sparse
+# query vectors — the cross-encoder score against on-topic chunks collapses (measured: +6.75 with
+# the topic alone vs +0.33 with the full instruction). We rewrite the request down to its topic
+# before embedding. The ORIGINAL request is left untouched for downstream generators (the exam agent
+# still needs "5-question MCQ" to know the count and type).
+
+_REWRITE_PROMPT = (
+    "You convert a user's request into a short search query for a retrieval system.\n"
+    "Keep ONLY the subject matter / topic. Strip task instructions (create, generate, make),\n"
+    "output-type words (exam, quiz, MCQ, essay, slides, mindmap, summary), question counts and\n"
+    "formatting. Output ONLY the topic phrase — no quotes, no extra words."
+)
+
+
+def _rewrite_query_for_retrieval(query: str) -> str:
+    from backend.core.models import MODELS
+    try:
+        resp = MODELS["gpt-5-nano"].invoke([
+            SystemMessage(content=_REWRITE_PROMPT),
+            HumanMessage(content=query),
+        ])
+        topic = (resp.content or "").strip().strip('"').strip()
+        if topic and topic.lower() != query.lower():
+            logger.info("Query rewrite: %r -> %r", query, topic)
+        return topic or query
+    except Exception as e:
+        logger.warning("Query rewrite failed (%s) — using raw query", e)
+        return query
+
+
+def resolve_retrieval_query(
+    query: str, retrieval_query: str | None = None, rewrite_query: bool = True
+) -> str:
+    """The string actually embedded for retrieval: an explicit `retrieval_query` wins; otherwise the
+    request is rewritten to its topic (unless `rewrite_query` is False, which embeds it verbatim)."""
+    if retrieval_query:
+        return retrieval_query
+    if rewrite_query:
+        return _rewrite_query_for_retrieval(query)
+    return query
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -202,6 +249,8 @@ def retrieve(
     collection_name: str = settings.qdrant_collection,
     top_k: int = 5,
     course_id: str | None = None,
+    retrieval_query: str | None = None,
+    rewrite_query: bool = True,
 ) -> list[dict]:
     """
     Hybrid retrieval over local Qdrant using dense + sparse vectors with RRF fusion.
@@ -223,7 +272,8 @@ def retrieve(
     Returns:
         List of dicts ordered by RRF score descending.
     """
-    query_vectors = embed_query(query)
+    eff_query = resolve_retrieval_query(query, retrieval_query, rewrite_query)
+    query_vectors = embed_query(eff_query)
 
     query_filter = (
         Filter(
@@ -276,6 +326,9 @@ def retrieve_with_kg(
     course_id: str | None = None,
     kg_hops: int = 1,
     kg_extra_chunks: int = 3,
+    kg_score_threshold: float = 0.0,
+    retrieval_query: str | None = None,
+    rewrite_query: bool = True,
 ) -> dict:
     """
     KG-augmented retrieval: vector search + knowledge graph expansion.
@@ -286,29 +339,51 @@ def retrieve_with_kg(
         3. Traverse Neo4j kg_hops away from those concepts → subgraph
            (related concept IDs + the edges between them)
         4. Scroll Qdrant for chunks covering the discovered related concepts
-        5. Merge base and KG chunks, deduplicate by (document_id, chunk_index)
+        5. Deduplicate KG chunks against base chunks by (document_id, chunk_index)
+        6. Score the KG chunks with the cross-encoder (query × chunk) and keep only the
+           genuinely relevant ones (score ≥ kg_score_threshold), highest first, capped at
+           kg_extra_chunks.
+
+    Why step 6: KG expansion widens *recall* by concept adjacency, but adjacency ≠ relevance —
+    it pulls in chunks about loosely-related concepts. Previously the kg_extra_chunks slots were
+    filled in arbitrary Qdrant scroll order, so a highly relevant KG chunk could be dropped while
+    an off-topic one was kept. The cross-encoder is the precise relevance signal we already use
+    for reranking, so we apply it here to *select* which KG chunks are worth adding.
 
     Args:
-        query:            Raw user query string.
-        collection_name:  Qdrant collection to search.
-        top_k:            Number of chunks from base vector retrieval.
-        course_id:        Optional course filter applied to both retrieval steps.
-        kg_hops:          Traversal depth in Neo4j (1 = direct neighbors only).
-                          Keep at 1 for precision; 2 for broader context.
-        kg_extra_chunks:  Max number of KG-sourced chunks to append.
+        query:              Raw user query string.
+        collection_name:    Qdrant collection to search.
+        top_k:              Number of chunks from base vector retrieval.
+        course_id:          Optional course filter applied to both retrieval steps.
+        kg_hops:            Traversal depth in Neo4j (1 = direct neighbors only).
+                            Keep at 1 for precision; 2 for broader context.
+        kg_extra_chunks:    Max number of KG-sourced chunks to append after the relevance gate.
+        kg_score_threshold: Minimum cross-encoder score for a KG chunk to be kept. The
+                            ms-marco cross-encoder emits raw logits where 0.0 ≈ the
+                            relevant/irrelevant boundary (relevant pairs score well above 0,
+                            off-topic ones strongly negative), so 0.0 is a sensible default gate.
+        retrieval_query:    Explicit topic query to embed. If given, used as-is (no rewrite).
+        rewrite_query:      When no retrieval_query is given, rewrite `query` down to its topic
+                            before embedding (strips "create a 5-question MCQ exam about …"). The
+                            resolved query is returned as `retrieval_query` for the caller's rerank.
 
     Returns:
         {
             "base_chunks": list[dict],  # top_k from vector retrieval, with RRF score
-            "kg_chunks":   list[dict],  # up to kg_extra_chunks from KG expansion, score=None
+            "retrieval_query": str,     # the topic query actually embedded (for the caller's rerank)
+            "kg_chunks":   list[dict],  # relevance-gated KG chunks, with cross-encoder score
             "kg_context": {
                 "concepts":  list[str],   # all concept IDs in the traversed subgraph
                 "relations": list[dict],  # edges: {"from", "type", "to"}
             }
         }
     """
-    # Step 1 — base vector retrieval
-    base_chunks = retrieve(query, collection_name, top_k, course_id)
+    # Resolve the retrieval query once (topic-only), then reuse it for base retrieval, the KG
+    # relevance gate, and the returned value so the caller's final rerank uses it too.
+    eff_query = resolve_retrieval_query(query, retrieval_query, rewrite_query)
+
+    # Step 1 — base vector retrieval (eff_query already resolved; do not rewrite again)
+    base_chunks = retrieve(eff_query, collection_name, top_k, course_id, rewrite_query=False)
 
     # Step 2 — collect seed concept IDs from retrieved chunks
     seed_concept_ids = [
@@ -323,6 +398,7 @@ def retrieve_with_kg(
         logger.info("No covers_concepts in retrieved chunks — skipping KG expansion.")
         return {
             "base_chunks": base_chunks,
+            "retrieval_query": eff_query,
             "kg_chunks": [],
             "kg_context": {"concepts": [], "relations": []},
         }
@@ -334,6 +410,7 @@ def retrieve_with_kg(
         logger.error("Neo4j traversal failed: %s", e)
         return {
             "base_chunks": base_chunks,
+            "retrieval_query": eff_query,
             "kg_chunks": [],
             "kg_context": {"concepts": seed_concept_ids, "relations": []},
         }
@@ -347,6 +424,7 @@ def retrieve_with_kg(
         logger.info("KG traversal returned no new concepts.")
         return {
             "base_chunks": base_chunks,
+            "retrieval_query": eff_query,
             "kg_chunks": [],
             "kg_context": subgraph,
         }
@@ -363,23 +441,38 @@ def retrieve_with_kg(
         logger.error("Qdrant scroll by concepts failed: %s", e)
         return {
             "base_chunks": base_chunks,
+            "retrieval_query": eff_query,
             "kg_chunks": [],
             "kg_context": subgraph,
         }
 
-    # Step 5 — deduplicate KG chunks against base chunks
+    # Step 5 — deduplicate KG candidates against base chunks (keep ALL; do not truncate yet,
+    # so the relevance gate below chooses from the full candidate pool rather than scroll order).
     seen = {(c["document_id"], c["chunk_index"]) for c in base_chunks}
-    kg_chunks = []
+    deduped = []
     for chunk in kg_candidates:
         key = (chunk["document_id"], chunk["chunk_index"])
         if key not in seen:
             seen.add(key)
-            kg_chunks.append(chunk)
-        if len(kg_chunks) >= kg_extra_chunks:
-            break
+            deduped.append(chunk)
+
+    # Step 6 — cross-encoder relevance gate. Score every (query, KG chunk) pair, keep only those
+    # at or above the threshold, highest first, capped at kg_extra_chunks. This replaces the
+    # None placeholder score with the authoritative cross-encoder relevance signal. Imported
+    # locally so a plain retrieve() call never pays the cross-encoder model load.
+    if deduped:
+        from backend.rag.reranker import rerank_chunks
+        ranked = rerank_chunks(eff_query, deduped)
+        kg_chunks = [c for c in ranked if c["score"] >= kg_score_threshold][:kg_extra_chunks]
+    else:
+        kg_chunks = []
+
+    logger.info("KG expansion: %d candidates -> %d kept (threshold=%.2f)",
+                len(deduped), len(kg_chunks), kg_score_threshold)
 
     return {
         "base_chunks": base_chunks,
+        "retrieval_query": eff_query,
         "kg_chunks": kg_chunks,
         "kg_context": subgraph,
     }
