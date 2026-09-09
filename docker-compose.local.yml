@@ -1,0 +1,106 @@
+name: edu-local
+services:
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: edu_client
+    ports:
+      - "4200:80"
+    environment:
+      - API_URL=http://localhost:8420
+      - NEO4J_URL=bolt://localhost:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edu_backend
+    user: root
+    command: uvicorn backend.local_main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8420:8000"
+    environment:
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - QDRANT_URL=http://qdrant:6333
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NIM_API_KEY=${NIM_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TORCHDYNAMO_DISABLE=1
+      # URL of the ETL stack's export API. Override with SHARED_DB_URL env var
+      # for cloud deployment — nothing else about the sync contract changes.
+      - SHARED_DB_URL=http://host.docker.internal:8421
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # required on Linux
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - hf_cache:/app/.cache/huggingface
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: edu_postgres_local
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: edu_minio_local
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_local_data:/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: edu_qdrant_local
+    ports:
+      - "6335:6333"
+      - "6336:6334"
+    volumes:
+      - qdrant_local_data:/qdrant/storage
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: edu_neo4j_local
+    environment:
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - neo4j_local_data:/data
+
+volumes:
+  postgres_local_data:
+  minio_local_data:
+  qdrant_local_data:
+  neo4j_local_data:
+  hf_cache:

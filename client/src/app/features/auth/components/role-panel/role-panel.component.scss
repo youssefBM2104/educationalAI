@@ -1,0 +1,205 @@
+@use 'tokens' as *;
+
+// ── Host: the flex item that grows/shrinks ────────────────────────────────────
+
+:host {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none;
+  transition: flex-grow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.role-panel--lecturer {
+    background: linear-gradient(145deg, $navy-primary 0%, $navy-deep 100%);
+    color: white;
+  }
+
+  &.role-panel--student {
+    background: linear-gradient(145deg, $teal-accent 0%, $teal-deep 100%);
+    color: white;
+  }
+
+  // Expanded state: this panel was chosen
+  &.role-panel--selected {
+    flex-grow: 1.7;
+    cursor: default;
+  }
+
+  // Receded state: the other panel was chosen
+  &.role-panel--receded {
+    flex-grow: 0.6;
+
+    .presentation {
+      opacity: 0.45;
+      transform: scale(0.88);
+    }
+  }
+
+  &:focus-visible {
+    box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.65);
+  }
+
+  // Hover nudge when no role is committed
+  &:not(.role-panel--selected):not(.role-panel--receded):hover .presentation__icon {
+    transform: translateY(-5px);
+  }
+}
+
+// ── Inner layout: fills the host ─────────────────────────────────────────────
+
+.panel-inner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Role presentation ─────────────────────────────────────────────────────────
+
+.presentation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-24;
+  padding: $space-64 $space-48;
+  text-align: center;
+  transition: opacity 0.3s ease, transform 0.35s ease;
+  position: relative;
+  z-index: 1;
+
+  &--hidden {
+    opacity: 0;
+    transform: scale(0.88) translateY(-10px);
+    pointer-events: none;
+    position: absolute;
+  }
+
+  &__icon {
+    opacity: 0.9;
+    transition: transform 0.25s ease;
+  }
+
+  &__copy {
+    display: flex;
+    flex-direction: column;
+    gap: $space-12;
+  }
+
+  &__title {
+    font-family: $font-serif;
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    color: white;
+  }
+
+  &__tagline {
+    font-family: $font-sans;
+    font-size: 1rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.55;
+    max-width: 220px;
+  }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-8;
+    padding: $space-12 $space-24;
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    margin-top: $space-8;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    &:active { transform: scale(0.97); }
+
+    &:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ── Form slot ─────────────────────────────────────────────────────────────────
+
+.panel-form {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-48 $space-32;
+  overflow-y: auto;
+  pointer-events: none;
+  z-index: 2;
+
+  &--active {
+    pointer-events: auto;
+  }
+}
+
+// ── Mobile ────────────────────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  :host {
+    flex-grow: 1;
+    min-height: 180px;
+    transition: flex-grow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.role-panel--selected {
+      flex-grow: 3;
+      min-height: 70vh;
+    }
+
+    &.role-panel--receded {
+      flex-grow: 0.5;
+      min-height: 80px;
+
+      .presentation {
+        padding: $space-16 $space-24;
+        gap: $space-12;
+
+        &__icon,
+        &__tagline,
+        &__cta {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .presentation {
+    padding: $space-32 $space-24;
+    gap: $space-16;
+
+    &__title { font-size: 1.75rem; }
+  }
+
+  .panel-form {
+    padding: $space-24 $space-16;
+    align-items: flex-start;
+    padding-top: $space-32;
+  }
+}

@@ -1,0 +1,81 @@
+<div
+  class="auth-form"
+  [class.auth-form--lecturer]="role() === 'lecturer'"
+  [class.auth-form--student]="role() === 'student'"
+>
+  <!-- Back link -->
+  <button
+    class="auth-form__back"
+    type="button"
+    (click)="goBack()"
+    aria-label="Back to role selection"
+  >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Back
+  </button>
+
+  <!-- Header -->
+  <div class="auth-form__header">
+    <h2 class="auth-form__title">Welcome back</h2>
+    <p class="auth-form__subtitle">Sign in as a {{ role() }}</p>
+  </div>
+
+  <!-- Form -->
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="auth-form__fields">
+
+    <div class="field" [class.field--error]="!!emailError">
+      <label class="field__label" for="auth-email">Email address</label>
+      <input
+        class="field__input"
+        id="auth-email"
+        type="email"
+        formControlName="email"
+        placeholder="you@institution.edu"
+        autocomplete="email"
+        [attr.aria-describedby]="emailError ? 'email-error' : null"
+        [attr.aria-invalid]="!!emailError || null"
+      />
+      @if (emailError) {
+        <span class="field__error" id="email-error" role="alert">{{ emailError }}</span>
+      }
+    </div>
+
+    <div class="field" [class.field--error]="!!passwordError">
+      <label class="field__label" for="auth-password">Password</label>
+      <input
+        class="field__input"
+        id="auth-password"
+        type="password"
+        formControlName="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        [attr.aria-describedby]="passwordError ? 'password-error' : null"
+        [attr.aria-invalid]="!!passwordError || null"
+      />
+      @if (passwordError) {
+        <span class="field__error" id="password-error" role="alert">{{ passwordError }}</span>
+      }
+    </div>
+
+    @if (loginError()) {
+      <div class="auth-form__alert" role="alert">{{ loginError() }}</div>
+    }
+
+    <button
+      class="auth-form__submit"
+      type="submit"
+      [disabled]="isLoading()"
+      [attr.aria-busy]="isLoading()"
+    >
+      @if (isLoading()) {
+        <span class="spinner" aria-hidden="true"></span>
+        Signing in…
+      } @else {
+        Sign in
+      }
+    </button>
+
+  </form>
+</div>

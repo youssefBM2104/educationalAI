@@ -16,6 +16,7 @@ from neo4j import GraphDatabase
 # --- Wipe PostgreSQL ---
 TABLES = [
     "documents",
+    "images",
     # add future tables here as the schema grows
     # "users",
     # "courses",
@@ -67,7 +68,7 @@ minio = Minio(
     secure=False,
 )
 
-for bucket in (settings.minio_bucket_originals, settings.minio_bucket_markdown):
+for bucket in (settings.minio_bucket_originals, settings.minio_bucket_markdown,settings.minio_bucket_images):
     if not minio.bucket_exists(bucket):
         print(f"–  MinIO bucket not found, nothing to delete: {bucket}")
         continue

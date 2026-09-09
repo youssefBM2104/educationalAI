@@ -1,0 +1,104 @@
+<div class="preview">
+
+  @if (isLoading()) {
+    <div class="preview__loading" role="status">Loading extraction data…</div>
+  } @else if (error()) {
+    <div class="preview__error" role="alert">{{ error() }}</div>
+  } @else if (data(); as d) {
+
+    <!-- Header -->
+    <div class="preview__header">
+      <div>
+        <h2 class="preview__title">{{ document().filename }}</h2>
+        <p class="preview__meta">
+          {{ d.chunks.length }} chunks · {{ d.images.length }} images · {{ conceptCount }} concepts
+        </p>
+      </div>
+      <button class="preview__sync-btn" type="button" disabled title="Synced automatically during ingestion">
+        Synced to knowledge base
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="preview__tabs" role="tablist">
+      <button class="preview__tab" [class.preview__tab--active]="activeTab() === 'chunks'"
+        role="tab" [attr.aria-selected]="activeTab() === 'chunks'" (click)="setTab('chunks')">
+        Text chunks
+      </button>
+      <button class="preview__tab" [class.preview__tab--active]="activeTab() === 'images'"
+        role="tab" [attr.aria-selected]="activeTab() === 'images'" (click)="setTab('images')">
+        Images ({{ d.images.length }})
+      </button>
+      <button class="preview__tab" [class.preview__tab--active]="activeTab() === 'kg'"
+        role="tab" [attr.aria-selected]="activeTab() === 'kg'" (click)="setTab('kg')">
+        Knowledge graph
+      </button>
+    </div>
+
+    <!-- Tab panels -->
+    <div role="tabpanel">
+
+      @if (activeTab() === 'chunks') {
+        <div class="chunks">
+          @for (chunk of d.chunks; track chunk.chunk_id) {
+            <div class="chunk">
+              <p class="chunk__label">Chunk {{ $index + 1 }}</p>
+              <p class="chunk__text">{{ chunk.text }}</p>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'images') {
+
+        <!-- Image detail panel -->
+        @if (selectedImage(); as sel) {
+          <div class="image-detail">
+            <button class="image-detail__close" (click)="closeImage()" aria-label="Close">✕</button>
+            <div class="image-detail__body">
+              <div class="image-detail__visual">
+                @if (imageUrl(sel.url); as src) {
+                  <img [src]="src" [alt]="sel.vlm_description ?? 'Extracted figure'" class="image-detail__img" />
+                } @else {
+                  <span class="image-card__placeholder-label">No preview</span>
+                }
+              </div>
+              <div class="image-detail__info">
+                <p class="image-card__vlm-label">VLM description</p>
+                <p class="image-detail__desc">{{ sel.vlm_description ?? 'No description available.' }}</p>
+                @if (sel.page_number) {
+                  <p class="image-detail__meta">Page {{ sel.page_number }}</p>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Image grid -->
+        <div class="images-grid">
+          @for (img of d.images; track img.image_id) {
+            <button class="image-card" (click)="selectImage(img)" [class.image-card--active]="selectedImage()?.image_id === img.image_id">
+              <div class="image-card__visual">
+                @if (imageUrl(img.url); as src) {
+                  <img [src]="src" [alt]="img.vlm_description ?? 'Extracted figure'" class="image-card__img" />
+                } @else {
+                  <span class="image-card__placeholder-label">No preview</span>
+                }
+              </div>
+              <div class="image-card__caption">
+                <p class="image-card__vlm-label">VLM description</p>
+                <p class="image-card__desc">{{ truncate(img.vlm_description) }}</p>
+              </div>
+            </button>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'kg') {
+        <app-kg-graph [documentId]="document().document_id" />
+      }
+
+    </div>
+
+  }
+</div>

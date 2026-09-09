@@ -1,0 +1,201 @@
+@use 'tokens' as *;
+
+// Animate in when the component mounts
+:host {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  animation: formReveal 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes formReveal {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+// ── Card shell ────────────────────────────────────────────────────────────────
+
+.auth-form {
+  background: white;
+  border-radius: $radius-lg;
+  padding: $space-48 $space-32;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 100%;
+
+  @media (max-width: 480px) {
+    padding: $space-32 $space-24;
+    border-radius: $radius-md;
+  }
+
+  // ── Back button ─────────────────────────────────────────────────────────────
+
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-8;
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: $muted;
+    cursor: pointer;
+    margin-bottom: $space-32;
+    padding: $space-4 0;
+    transition: color 0.15s ease;
+    border-radius: $radius-sm;
+
+    &:hover { color: $ink; }
+
+    &:focus-visible {
+      outline: 2px solid $muted;
+      outline-offset: 3px;
+    }
+  }
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+
+  &__header { margin-bottom: $space-32; }
+
+  &__title {
+    font-family: $font-serif;
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: $ink;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    margin-bottom: $space-8;
+  }
+
+  &__subtitle {
+    font-family: $font-sans;
+    font-size: 0.9375rem;
+    color: $muted;
+    text-transform: capitalize;
+  }
+
+  // ── Fields container ────────────────────────────────────────────────────────
+
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: $space-16;
+  }
+
+  // ── Error alert ─────────────────────────────────────────────────────────────
+
+  &__alert {
+    padding: $space-12 $space-16;
+    border-radius: $radius-sm;
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    background: #FEF3F2;
+    color: #B42318;
+    border: 1px solid #FECDCA;
+  }
+
+  // ── Submit button ───────────────────────────────────────────────────────────
+
+  &__submit {
+    width: 100%;
+    padding: $space-16;
+    border-radius: $radius-md;
+    font-family: $font-sans;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-8;
+    margin-top: $space-8;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+
+    &:disabled { opacity: 0.65; cursor: not-allowed; }
+    &:not(:disabled):hover  { opacity: 0.88; }
+    &:not(:disabled):active { transform: scale(0.99); }
+
+    &:focus-visible {
+      outline: 3px solid;
+      outline-offset: 2px;
+    }
+  }
+
+  // ── Role-specific accent colors ─────────────────────────────────────────────
+
+  &--lecturer {
+    .auth-form__submit {
+      background: $navy-primary;
+      &:focus-visible { outline-color: $navy-primary; }
+    }
+  }
+
+  &--student {
+    .auth-form__submit {
+      background: $teal-accent;
+      &:focus-visible { outline-color: $teal-accent; }
+    }
+  }
+}
+
+// ── Field component ───────────────────────────────────────────────────────────
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-8;
+
+  &__label {
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: $ink;
+  }
+
+  &__input {
+    width: 100%;
+    padding: $space-12 $space-16;
+    border-radius: $radius-sm;
+    border: 1.5px solid $line;
+    font-size: 0.9375rem;
+    color: $ink;
+    background: white;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &::placeholder { color: #B0BAC9; }
+  }
+
+  &--error .field__input { border-color: #FDA29B; }
+
+  &__error {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: #B42318;
+  }
+}
+
+// Role-specific focus rings on inputs
+.auth-form--lecturer .field__input:focus {
+  border-color: $navy-primary;
+  box-shadow: 0 0 0 3px rgba($navy-primary, 0.12);
+}
+
+.auth-form--student .field__input:focus {
+  border-color: $teal-accent;
+  box-shadow: 0 0 0 3px rgba($teal-accent, 0.14);
+}
+
+// ── Loading spinner ───────────────────────────────────────────────────────────
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

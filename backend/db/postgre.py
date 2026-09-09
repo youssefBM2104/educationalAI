@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import DateTime, String, func, Enum
+from sqlalchemy import DateTime, String, func, Enum, Integer, Float
 from sqlalchemy import Column
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -16,6 +16,19 @@ class DocumentStatus(str, enum.Enum):
     ready      = "ready"
     failed     = "failed"
 
+class Image(Base):
+    __tablename__ = "images"
+    image_id = Column(String, primary_key=True)
+    document_id = Column(String, nullable=False)
+    chunk_id = Column(String, nullable=True)
+    page_number = Column(Integer)
+    bbox_left = Column(Float)
+    bbox_top = Column(Float)
+    bbox_right = Column(Float)
+    bbox_bottom = Column(Float)
+    minio_path = Column(String, nullable=False)
+    vlm_description = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
 
 class Document(Base):
     __tablename__ = "documents"

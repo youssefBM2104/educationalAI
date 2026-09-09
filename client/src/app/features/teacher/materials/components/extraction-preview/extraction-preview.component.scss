@@ -1,0 +1,324 @@
+@use 'tokens' as *;
+
+.preview {
+  // ── Dev mock banner ──────────────────────────────────────────────────────────
+
+  &__mock-banner {
+    display: flex;
+    gap: $space-8;
+    align-items: baseline;
+    flex-wrap: wrap;
+    padding: $space-12 $space-16;
+    border-radius: $radius-sm;
+    background: #FDF1DC;
+    border: 1px solid #F9C84A;
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: #7A4F0A;
+    margin-bottom: $space-24;
+
+    code {
+      font-size: 0.75rem;
+      background: rgba(0,0,0,0.06);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+  }
+
+  // ── Header ───────────────────────────────────────────────────────────────────
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: $space-16;
+    margin-bottom: $space-24;
+    padding-bottom: $space-16;
+    border-bottom: 1px solid $line;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    font-family: $font-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $ink;
+    word-break: break-all;
+    margin-bottom: $space-4;
+  }
+
+  &__meta {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $muted;
+    margin: 0;
+  }
+
+  &__sync-btn {
+    flex-shrink: 0;
+    padding: $space-8 $space-16;
+    border-radius: $radius-sm;
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    background: $teal-accent;
+    border: none;
+    cursor: default;
+    opacity: 0.75;
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────────
+
+  &__tabs {
+    display: flex;
+    gap: $space-24;
+    border-bottom: 1px solid $line;
+    margin-bottom: $space-24;
+  }
+
+  &__tab {
+    padding-bottom: $space-12;
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $muted;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    margin-bottom: -1px;
+
+    &--active {
+      color: $navy-primary;
+      border-bottom-color: $navy-primary;
+    }
+
+    &:hover:not(&--active) { color: $ink; }
+
+    &:focus-visible {
+      outline: 2px solid $navy-primary;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+}
+
+// ── Text chunks ───────────────────────────────────────────────────────────────
+
+.chunks { display: flex; flex-direction: column; gap: $space-12; }
+
+.chunk {
+  background: $bg;
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  padding: $space-16;
+
+  &__label {
+    font-family: $font-sans;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $muted;
+    margin: 0 0 $space-8;
+  }
+
+  &__text {
+    font-family: $font-sans;
+    font-size: 0.875rem;
+    color: $ink;
+    line-height: 1.6;
+    margin: 0;
+  }
+}
+
+// ── Images ────────────────────────────────────────────────────────────────────
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $space-16;
+}
+
+.image-card {
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover { border-color: $teal-accent; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  &--active { border-color: $teal-accent; box-shadow: 0 0 0 2px $teal-soft; }
+
+  &__visual {
+    height: 120px;
+    background: linear-gradient(135deg, #E7ECF3, $teal-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-sans;
+    font-size: 0.75rem;
+    color: $muted;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__placeholder-label {
+    font-family: $font-sans;
+    font-size: 0.75rem;
+    color: $muted;
+  }
+
+  &__caption { padding: $space-12; }
+
+  &__vlm-label {
+    font-family: $font-sans;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $teal-accent;
+    margin: 0 0 $space-4;
+  }
+
+  &__desc {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $ink;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+// ── Image detail panel ────────────────────────────────────────────────────────
+
+.image-detail {
+  position: relative;
+  border: 1px solid $line;
+  border-radius: $radius-lg;
+  background: white;
+  margin-bottom: $space-24;
+  overflow: hidden;
+
+  &__close {
+    position: absolute;
+    top: $space-12;
+    right: $space-12;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid $line;
+    background: white;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: $muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    transition: background 0.15s ease;
+    &:hover { background: $bg; color: $ink; }
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 320px;
+
+    @media (max-width: 600px) { grid-template-columns: 1fr; }
+  }
+
+  &__visual {
+    background: linear-gradient(135deg, #E7ECF3, $teal-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-height: 480px;
+  }
+
+  &__info {
+    padding: $space-32;
+    display: flex;
+    flex-direction: column;
+    gap: $space-12;
+    border-left: 1px solid $line;
+    overflow-y: auto;
+    max-height: 480px;
+  }
+
+  &__desc {
+    font-family: $font-sans;
+    font-size: 0.9375rem;
+    color: $ink;
+    line-height: 1.7;
+    margin: 0;
+    flex: 1;
+  }
+
+  &__meta {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $muted;
+    margin: 0;
+  }
+}
+
+// ── Knowledge graph ───────────────────────────────────────────────────────────
+
+.kg-section {
+  &__hint {
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    color: $muted;
+    margin: 0 0 $space-16;
+  }
+}
+
+.kg-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-12;
+  align-items: center;
+  background: $bg;
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  padding: $space-24;
+}
+
+.kg-node {
+  background: white;
+  border: 1.5px solid $navy-primary;
+  color: $navy-primary;
+  padding: $space-8 $space-16;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  &--secondary {
+    border-color: $teal-accent;
+    color: $teal-accent;
+  }
+}
+
+.kg-edge {
+  color: $muted;
+  font-size: 1.125rem;
+  line-height: 1;
+}

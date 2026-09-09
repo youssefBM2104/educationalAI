@@ -1,0 +1,58 @@
+<div class="panel-inner">
+
+  <!-- Role presentation: icon + title + tagline + CTA -->
+  <div class="presentation" [class.presentation--hidden]="isSelected()">
+
+    <div class="presentation__icon" aria-hidden="true">
+      @if (role() === 'lecturer') {
+        <!-- Presentation board -->
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="7" y="7" width="50" height="34" rx="4" stroke="currentColor" stroke-width="2.5" fill="none"/>
+          <line x1="32" y1="41" x2="32" y2="54" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="20" y1="54" x2="44" y2="54" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="15" y1="22" x2="30" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="15" y1="30" x2="38" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="46" cy="18" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+          <line x1="46" y1="14" x2="46" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="46" y1="18" x2="49" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      } @else {
+        <!-- Open book -->
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M32 14C32 14 18 10 9 14V50C18 46 32 50 32 50V14Z" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+          <path d="M32 14C32 14 46 10 55 14V50C46 46 32 50 32 50V14Z" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+          <line x1="32" y1="14" x2="32" y2="50" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 4"/>
+          <path d="M20 24 Q26 22 30 25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M20 31 Q26 29 30 32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M44 24 Q38 22 34 25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M44 31 Q38 29 34 32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      }
+    </div>
+
+    <div class="presentation__copy">
+      <h2 class="presentation__title">{{ config.label }}</h2>
+      <p class="presentation__tagline">{{ config.tagline }}</p>
+    </div>
+
+    <button
+      class="presentation__cta"
+      type="button"
+      tabindex="-1"
+      aria-hidden="true"
+      (click)="$event.stopPropagation(); handleClick()"
+    >
+      {{ config.cta }}
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- Slot for the auth form, projected from the parent -->
+  <div class="panel-form" [class.panel-form--active]="isSelected()">
+    <ng-content />
+  </div>
+
+</div>

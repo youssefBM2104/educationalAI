@@ -16,10 +16,15 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     # MinIO
     minio_endpoint: str = "localhost:9000"
+    # Browser-accessible MinIO host used in presigned URLs.
+    # Inside Docker the endpoint is an internal hostname (e.g. minio:9000);
+    # set this to the host-exposed address so the browser can reach the URL.
+    minio_public_endpoint: str = "localhost:9000"
     minio_root_user: str = ""
     minio_root_password: str = ""
     minio_bucket_originals: str = "originals"
     minio_bucket_markdown: str = "markdown"
+    minio_bucket_images: str = "images"
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "edu_collection"
@@ -31,6 +36,9 @@ class Settings(BaseSettings):
     nim_api_key: str = ""
     # OpenAI — GPT-5 family (per-agent model plan wired in core/models.py)
     openai_api_key: str = ""
+    # Shared DB — base URL of the export service (ETL stack's FastAPI app).
+    # Used by POST /sync/import.  Override with SHARED_DB_URL env var.
+    shared_db_url: str = "http://host.docker.internal:8421"
     # Google Gemini — held-out judge for offline evaluation (different provider than the
     # pipeline, so the judge never grades output from its own model family)
     google_api_key: str = ""
@@ -42,9 +50,9 @@ class Settings(BaseSettings):
     langsmith_project: str = "educational-ai"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
     # Ollama / VLM
-    ollama_host: str = "http://ollama:11434"
+    ollama_host: str = "http://localhost:11434"
     vlm_model: str = "llava:7b"
-    vlm_enrichment_enabled: bool = False
+    vlm_enrichment_enabled: bool = True
     # GPU device selection
     embedding_device: str = "cpu"
     docling_device: str = "cpu"

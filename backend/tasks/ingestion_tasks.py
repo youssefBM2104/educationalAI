@@ -5,10 +5,10 @@ import logging
 from celery import Celery
 
 from backend.core.config import settings
-from backend.db.postgre import SessionLocal, Document, DocumentStatus
-from backend.db.minio_client import download_file, upload_file
 from backend.etl.ingestion import parse_and_semantic_hierarchical_chunk
 from backend.db.kg_client import get_kg
+from backend.db.postgre import SessionLocal, Document, DocumentStatus, Image
+from backend.db.minio_client import download_file, upload_file, upload_image_bytes
 
 
 from backend.db.qdrant_client import upsert_chunks
@@ -48,8 +48,27 @@ def process_document(self, document_id: str, minio_key: str, course_id: str):
         download_file(tmp_path, minio_key, settings.minio_bucket_originals)
 
         logger.info("[%s] Parsing and chunking %s", self.request.id, tmp_path)
-        chunks = parse_and_semantic_hierarchical_chunk(tmp_path, document_id, course_id)
-        logger.info("[%s] Produced %d chunks", self.request.id, len(chunks))
+        chunks, image_records = parse_and_semantic_hierarchical_chunk(tmp_path, document_id, course_id)
+        logger.info("[%s] Produced %d chunks, %d images", self.request.id, len(chunks), len(image_records))
+
+        for rec in image_records:
+            object_key = f"{document_id}/{rec['image_id']}.png"
+            upload_image_bytes(rec["pil_image"], object_key, settings.minio_bucket_images)
+            bbox = rec.get("bbox")
+            db.add(Image(
+                image_id=rec["image_id"],
+                document_id=document_id,
+                chunk_id=rec["chunk_id"],
+                page_number=rec.get("page_number"),
+                bbox_left=bbox.l if bbox else None,
+                bbox_top=bbox.t if bbox else None,
+                bbox_right=bbox.r if bbox else None,
+                bbox_bottom=bbox.b if bbox else None,
+                minio_path=object_key,
+                vlm_description=rec.get("vlm_description"),
+            ))
+        db.commit()
+        logger.info("[%s] Persisted %d image records", self.request.id, len(image_records))
 
         logger.info("[%s] Building knowledge graph", self.request.id)
         kg = get_kg()

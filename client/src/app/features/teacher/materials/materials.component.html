@@ -1,0 +1,124 @@
+<div class="materials">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-header__title">Course materials</h1>
+      <p class="page-header__sub">Upload lecture material to build the knowledge base students will query.</p>
+    </div>
+    <div class="sync-area">
+      <button
+        class="sync-btn"
+        [class.sync-btn--syncing]="syncState() === 'syncing'"
+        [class.sync-btn--done]="syncState() === 'done'"
+        [class.sync-btn--error]="syncState() === 'error'"
+        [disabled]="syncState() === 'syncing'"
+        type="button"
+        (click)="syncToLocal()"
+      >
+        @if (syncState() === 'syncing') { Syncing… }
+        @else if (syncState() === 'done') { ✓ Synced }
+        @else if (syncState() === 'error') { Retry sync }
+        @else { Sync to local }
+      </button>
+
+      @if (syncState() === 'done' && syncResult(); as r) {
+        <p class="sync-summary">
+          {{ r.qdrant_points_upserted }} chunks · {{ r.neo4j_nodes_upserted }} nodes · {{ r.neo4j_relationships_upserted }} edges
+        </p>
+      }
+      @if (syncState() === 'error') {
+        <p class="sync-summary sync-summary--error">{{ syncError() }}</p>
+      }
+    </div>
+  </div>
+
+  <!-- Upload + table card -->
+  <div class="card">
+    <app-upload-zone (filesSelected)="onFilesSelected($event)" />
+
+    <div class="section-head">
+      <h2 class="section-head__title">Uploaded materials</h2>
+      @if (!isLoading()) {
+        <span class="section-head__count">{{ documents().length }} document{{ documents().length !== 1 ? 's' : '' }}</span>
+      }
+    </div>
+
+    @if (isLoading()) {
+      <p class="state-msg">Loading…</p>
+    } @else if (listError()) {
+      <p class="state-msg state-msg--error">{{ listError() }}</p>
+    } @else if (documents().length === 0) {
+      <p class="state-msg">No documents yet. Upload one above to get started.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of documents(); track doc.document_id) {
+              <tr [class.doc-table__row--selected]="selectedDocId() === doc.document_id">
+                <td>
+                  <div class="doc-name">
+                    <div class="doc-icon">{{ fileExt(doc.filename) }}</div>
+                    <div>
+                      <div class="doc-name__file">{{ doc.filename }}</div>
+                      <div class="doc-name__meta">
+                        @if (doc.uploadProgress !== undefined) {
+                          Uploading {{ doc.uploadProgress }}%…
+                        } @else if (doc.created_at) {
+                          {{ formatDate(doc.created_at) }}
+                        } @else {
+                          Queued
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <app-status-badge [status]="doc.status" />
+                </td>
+                <td>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-bar__fill"
+                      [class.progress-bar__fill--indeterminate]="doc.status === 'processing' && doc.uploadProgress === undefined"
+                      [style.width]="progressWidth(doc)"
+                    ></div>
+                  </div>
+                </td>
+                <td>
+                  @if (doc.status === 'ready') {
+                    <button
+                      class="link-btn"
+                      type="button"
+                      (click)="selectDoc(doc.document_id)"
+                    >
+                      {{ selectedDocId() === doc.document_id ? 'Hide' : 'View extraction →' }}
+                    </button>
+                  }
+                  @if (doc.status === 'failed' && doc.error_msg) {
+                    <span class="error-hint" [title]="doc.error_msg">Failed</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Extraction preview — shown when a ready doc is selected -->
+  @if (selectedDoc()) {
+    <div class="card card--preview">
+      <app-extraction-preview [document]="selectedDoc()!" />
+    </div>
+  }
+
+</div>

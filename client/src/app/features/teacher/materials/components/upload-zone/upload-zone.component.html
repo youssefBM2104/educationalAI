@@ -1,0 +1,39 @@
+<div
+  class="upload-zone"
+  [class.upload-zone--dragging]="isDragging()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  role="region"
+  aria-label="File upload area"
+>
+  <div class="upload-zone__icon" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <path d="M14 18V6M14 6l-5 5M14 6l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 20v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <h3 class="upload-zone__title">Drop files here, or browse</h3>
+  <p class="upload-zone__desc">Documents are parsed, embedded, and linked into the knowledge graph automatically.</p>
+
+  <input
+    #fileInput
+    type="file"
+    [accept]="accept"
+    multiple
+    class="upload-zone__input"
+    aria-label="Choose files to upload"
+    (change)="onInputChange($event)"
+  />
+
+  <button
+    class="upload-zone__btn"
+    type="button"
+    (click)="triggerInput(fileInput)"
+  >
+    Choose files
+  </button>
+
+  <p class="upload-zone__hint">Supports PDF, DOCX, PPTX — up to 50 MB per file</p>
+</div>

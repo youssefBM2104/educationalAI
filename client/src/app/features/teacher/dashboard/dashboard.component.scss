@@ -1,0 +1,216 @@
+@use 'tokens' as *;
+
+// ── Grid shell ────────────────────────────────────────────────────────────────
+
+:host { display: block; height: 100dvh; }
+
+.dashboard {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+
+  &--sidebar-closed {
+    grid-template-columns: 0 1fr;
+
+    .sidebar {
+      overflow: hidden;
+      padding: 0;
+      border-right: none;
+    }
+  }
+}
+
+// ── Top bar ───────────────────────────────────────────────────────────────────
+
+.topbar {
+  grid-column: 1 / -1;
+  background: $navy-deep;
+  color: white;
+  padding: $space-16 $space-24;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $space-16;
+  }
+
+  &__menu-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    padding: $space-4;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+
+    &:hover { color: white; }
+
+    &:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 2px;
+    }
+  }
+
+  &__brand {
+    font-family: $font-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: white;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $space-12;
+  }
+
+  &__role-pill {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: $radius-lg;
+    padding: $space-4 $space-12;
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: $navy-primary;
+    border: 2px solid rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-sans;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: white;
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+.sidebar {
+  grid-row: 2;
+  background: white;
+  border-right: 1px solid $line;
+  padding: $space-24 $space-12;
+  overflow-y: auto;
+  transition: padding 0.25s ease;
+
+  &__eyebrow {
+    font-family: $font-sans;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $muted;
+    margin: 0 $space-8 $space-8;
+  }
+
+  &__divider {
+    height: 1px;
+    background: $line;
+    margin: $space-16 $space-8;
+  }
+}
+
+// ── Nav items ─────────────────────────────────────────────────────────────────
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: $space-12;
+  padding: $space-8 $space-12;
+  border-radius: $radius-sm;
+  font-family: $font-sans;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: $ink;
+  text-decoration: none;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+
+  svg { flex-shrink: 0; opacity: 0.7; }
+
+  &:hover:not(&--disabled):not(&--active) {
+    background: $bg;
+  }
+
+  &--active {
+    background: $navy-primary;
+    color: white;
+    svg { opacity: 1; }
+  }
+
+  &--disabled {
+    color: $muted;
+    cursor: default;
+    opacity: 0.85;
+  }
+
+  &__soon {
+    margin-left: auto;
+    font-size: 0.625rem;
+    background: $line;
+    color: $muted;
+    padding: 2px $space-8;
+    border-radius: $radius-sm;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $navy-primary;
+    outline-offset: 1px;
+  }
+}
+
+// ── Main content ──────────────────────────────────────────────────────────────
+
+.content {
+  grid-row: 2;
+  overflow-y: auto;
+  background: $bg;
+}
+
+// ── Mobile: sidebar becomes an overlay drawer ─────────────────────────────────
+
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+
+    &--sidebar-closed .sidebar {
+      transform: translateX(-100%);
+    }
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    z-index: 100;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+    transform: translateX(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: $space-64;
+  }
+
+  .content { grid-column: 1 / -1; }
+}

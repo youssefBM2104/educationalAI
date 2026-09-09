@@ -1,0 +1,48 @@
+@use 'tokens' as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-4 + 2;
+  padding: $space-4 $space-12;
+  border-radius: 999px;
+  font-family: $font-sans;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  &--pending {
+    background: $line;
+    color: $muted;
+  }
+
+  &--processing {
+    background: #FDF1DC;
+    color: #A5670F;
+
+    .badge__dot { animation: pulse 1.4s ease-in-out infinite; }
+  }
+
+  &--ready {
+    background: #E4F3EC;
+    color: #1C7A4C;
+  }
+
+  &--failed {
+    background: #FEF3F2;
+    color: #B42318;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
